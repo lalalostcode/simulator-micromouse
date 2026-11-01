@@ -287,7 +287,8 @@ berisi rintangan. Minggu berikutnya direncanakan DQN di atas world/aksi/reward y
 sama (cukup ganti `discretize()` + Q-table). Kode di
 `sim/webots/micromouse_webots/controllers/continuous_qlearning/`, dunia
 `worlds/micromouse_continuous.wbt`, generator `tools/make_continuous_world.py`.
-Hasil run + `*_best` ikut di-track di git (seperti q-learning mms).
+Hanya hasil `*_best` yang di-track/push; keluaran training biasa di-gitignore (lihat
+bullet Keluaran).
 
 - **Menjalankan**: buka `micromouse_continuous.wbt` di aplikasi Webots, Reset, klik
   Fast. Variabel lingkungan (`MM_EPISODES`, `MM_SEED`, `MM_PATIENCE`,
@@ -334,12 +335,29 @@ Hasil run + `*_best` ikut di-track di git (seperti q-learning mms).
   x2, memakai Q-table dengan success rate 50-episode tertinggi (bukan yang terakhir).
 - **Keluaran** (folder controller): `episode_log.csv` (episode, epsilon, decisions,
   reward, outcome, hazard_steps, sim_time, states, start_heading, end_x, end_y),
-  `qtable_state.pkl`, `eval_result.json`, `layout.json`. Konvensi `_best`: user
-  menyalin ke `qtable_state_best.pkl`, `episode_log_best.csv`, `eval_result_best.json`
-  agar tak tertimpa; `MM_EVAL_ONLY` / konstanta `EVAL_ONLY` memuat `qtable_state_best.pkl`.
-  Analisis (jalankan di luar Webots): `plot_training.py` (6 panel), `visualize_path.py`
-  (`--gif`, `--episode N`), `plot_endpoints.py` (posisi akhir, pinggir vs tengah),
-  `plot_collision_heatmap.py`; tiap skrip punya `--best` / `--csv` bila relevan.
+  `qtable_state.pkl`, `eval_result.json` (berisi juga seluruh data peta: arena, start,
+  target, rintangan, area bahaya, plus jalur tiap uji evaluasi). Konvensi `_best`: user
+  menyalin ketiganya ke `qtable_state_best.pkl`, `episode_log_best.csv`,
+  `eval_result_best.json` agar tak tertimpa; `MM_EVAL_ONLY` / konstanta `EVAL_ONLY`
+  memuat `qtable_state_best.pkl`.
+  **Analisis: satu skrip `analisis.py`** (jalankan di luar Webots). Tiap grafik disimpan
+  sebagai SATU berkas di folder `hasil_analisis/` (tidak digabung): `01_reward`,
+  `02_success_rate_epsilon`, `03_langkah_episode_sukses`, `04_komposisi_hasil`,
+  `05_langkah_area_bahaya`, `06_jumlah_state`, `07_jalur_evaluasi`, `08_titik_akhir`,
+  `09_tabrakan_pinggir_tengah`, `10-12_heatmap_tabrakan_{semua,paruh_awal,paruh_akhir}`
+  (skala warna sama), `ringkasan.txt` (angka-angka), dan `13_animasi_jalur_evaluasi.gif`
+  bila `--gif`. `python analisis.py` -> nama tanpa akhiran; `--best` -> berakhiran
+  `_best` dan membaca file `*_best`. Opsi lain: `--last N`, `--from N`, `--window`,
+  `--bins`, `--edge`, `--csv`, `--eval`, `--outdir`.
+  **Yang di-push hanya**: kode (`arena_env.py`, `continuous_qlearning.py`,
+  `analisis.py`), tiga file `*_best`, dan `hasil_analisis/*_best.png` +
+  `ringkasan_best.txt`. Keluaran biasa (`qtable_state.pkl`, `episode_log.csv`,
+  `eval_result.json`, grafik tanpa `_best`, `*.gif`) masuk `.gitignore`: boleh ada lokal
+  tetapi tidak ikut git. Setelah training yang bagus: salin tiga file ke `_best`, lalu
+  `python analisis.py --best` sebelum commit. Riwayat git lama (commit bbf8a79) masih
+  menyimpan versi biasa dan skrip plot lama (`plot_training.py`, `visualize_path.py`,
+  `plot_endpoints.py`, `plot_collision_heatmap.py`, `layout.json`) yang kini digabung ke
+  `analisis.py`.
 - **Hasil** (seed 7, TARGET_KNOWN=False, peta di commit bbf8a79): konvergen di episode
   2007 (success rate 0,96, 1429 state dikunjungi), evaluasi greedy **10/10** sampai
   target (182-196 keputusan), tanpa menyentuh area bahaya; satu rute (susur bawah lalu

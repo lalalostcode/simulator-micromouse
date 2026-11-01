@@ -33,7 +33,7 @@ Variabel lingkungan (semua opsional):
                 (START_HEADING_DEFAULT). Evaluasi akhir selalu memakai arah robot di world.
   MM_EVAL_ONLY  1: tanpa training, muat qtable_state_best.pkl lalu evaluasi
   MICROMOUSE_QUIT 1: tutup Webots setelah selesai
-Keluaran di folder ini: episode_log.csv, qtable_state.pkl, eval_result.json.
+Keluaran di folder ini: episode_log.csv, qtable_state.pkl, eval_result.json (berisi juga peta untuk analisis.py).
 """
 import csv
 import json
@@ -149,11 +149,6 @@ def evaluate(env, agent):
 def main():
     env = ArenaEnv()
     agent = QAgent(SEED)
-    # Salinan tata letak yang dipakai run ini, untuk plot_endpoints.py (tidak bergantung eval_result.json).
-    lay = env.layout
-    (HERE / "layout.json").write_text(json.dumps({
-        "arena": env.arena, "start": list(env.start), "target": list(lay["target"]),
-        "target_r": env.target_r, "obstacles": lay["obstacles"], "hazards": lay["hazards"]}), encoding="utf-8")
     print(f"continuous_qlearning: seed={SEED} episodes<={EPISODES} layout=FIXED target_known={TARGET_KNOWN} start_heading={START_HEADING if START_HEADING else 'world'} "
           f"aksi={list(ACTION_NAMES)}")
 

@@ -1,0 +1,20 @@
+RINGKASAN TRAINING
+  episode            : 2007 (ep 1-2007)
+  hasil              : goal 543 (27%), tabrakan 1305, macet 159, timeout 0
+  success rate maks  : 0.96 (jendela 50) di episode 2007
+  epsilon akhir      : 0.05    state dikunjungi: 1429
+  langkah di bahaya  : rata-rata 1.5 per episode
+
+TABRAKAN: pinggir (< 0.4 m dari dinding) vs tengah
+  paruh 1: 951 tabrakan, pinggir 472 (50%), tengah 479
+  paruh 2: 354 tabrakan, pinggir 190 (54%), tengah 164
+
+EVALUASI GREEDY (epsilon 0)
+  sampai target      : 10/10
+  arah   0.0 deg    : 2/2 goal
+  arah  22.5 deg    : 2/2 goal
+  arah  45.0 deg    : 2/2 goal
+  arah  67.5 deg    : 2/2 goal
+  arah  90.0 deg    : 2/2 goal
+  langkah (goal)     : 182-196 keputusan (~25 s)
+  langkah di bahaya  : 0 (total semua uji)
