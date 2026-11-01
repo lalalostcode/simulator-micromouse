@@ -196,27 +196,20 @@ def panel_edge_bar(ax, d, lay, edge):
     if d["x"] is None:
         ax.text(.5, .5, "log tanpa kolom end_x/end_y", transform=ax.transAxes, ha="center")
         return
-    n = len(d["ep"])
-    half = n // 2
-    wd = _wall_dist(d, lay)
-    labels, e_pct, i_pct = [], [], []
-    for name, sel in ((f"paruh 1 (ep {d['ep'][0]}-{d['ep'][max(half - 1, 0)]})", np.arange(n) < half),
-                      (f"paruh 2 (ep {d['ep'][half] if half < n else d['ep'][-1]}-{d['ep'][-1]})", np.arange(n) >= half)):
-        c = sel & (d["out"] == "collision")
-        k = int(c.sum())
-        pe = float((wd[c] < edge).mean() * 100) if k else 0.0
-        labels.append(f"{name}\n{k} tabrakan")
-        e_pct.append(pe)
-        i_pct.append(100 - pe if k else 0.0)
-    xs = np.arange(2)
-    ax.bar(xs - .18, e_pct, .36, color="#4477cc", label="di pinggir")
-    ax.bar(xs + .18, i_pct, .36, color="#d64545", label="di tengah")
-    ax.set_xticks(xs)
-    ax.set_xticklabels(labels, fontsize=9)
+    c = d["out"] == "collision"
+    k = int(c.sum())
+    n_edge = int((_wall_dist(d, lay)[c] < edge).sum())
+    n_mid = k - n_edge
+    pct = lambda v: v / k * 100 if k else 0.0
+    bars = ax.bar([0, 1], [pct(n_edge), pct(n_mid)], .6, color=["#4477cc", "#d64545"])
+    ax.set_xticks([0, 1])
+    ax.set_xticklabels(["di pinggir", "di tengah"])
+    for b, v in zip(bars, (n_edge, n_mid)):
+        ax.text(b.get_x() + b.get_width() / 2, b.get_height() + 1.5, f"{v} ({pct(v):.0f}%)", ha="center", fontsize=10)
     ax.set_ylabel("% dari tabrakan")
     ax.set_ylim(0, 100)
-    ax.legend()
-    ax.grid(alpha=.25)
+    ax.set_xlabel(f"semua episode: {k} tabrakan")
+    ax.grid(alpha=.25, axis="y")
 
 
 def heat_hist(d, lay, bins, sel):
@@ -255,13 +248,11 @@ def summary_lines(d, lay, W, edge):
          ""]
     if d["x"] is not None and cnt["collision"]:
         wd = _wall_dist(d, lay)
-        half = n // 2
-        L.append(f"TABRAKAN: pinggir (< {edge:g} m dari dinding) vs tengah")
-        for name, sel in (("paruh 1", np.arange(n) < half), ("paruh 2", np.arange(n) >= half)):
-            c = sel & (d["out"] == "collision")
-            kk = int(c.sum())
-            pi = int((c & (wd < edge)).sum())
-            L.append(f"  {name}: {kk} tabrakan, pinggir {pi} ({pi / kk * 100 if kk else 0:.0f}%), tengah {kk - pi}")
+        c = d["out"] == "collision"
+        kk = int(c.sum())
+        pi = int((wd[c] < edge).sum())
+        L.append(f"TABRAKAN: pinggir (< {edge:g} m dari dinding) vs tengah, semua episode")
+        L.append(f"  {kk} tabrakan: pinggir {pi} ({pi / kk * 100:.0f}%), tengah {kk - pi} ({(kk - pi) / kk * 100:.0f}%)")
         L.append("")
     L.append("EVALUASI GREEDY (epsilon 0)")
     L.append(f"  sampai target      : {lay['success']}/{lay['n']}")

@@ -5,9 +5,8 @@ RINGKASAN TRAINING
   epsilon akhir      : 0.05    state dikunjungi: 1429
   langkah di bahaya  : rata-rata 1.5 per episode
 
-TABRAKAN: pinggir (< 0.4 m dari dinding) vs tengah
-  paruh 1: 951 tabrakan, pinggir 472 (50%), tengah 479
-  paruh 2: 354 tabrakan, pinggir 190 (54%), tengah 164
+TABRAKAN: pinggir (< 0.4 m dari dinding) vs tengah, semua episode
+  1305 tabrakan: pinggir 662 (51%), tengah 643 (49%)
 
 EVALUASI GREEDY (epsilon 0)
   sampai target      : 10/10
