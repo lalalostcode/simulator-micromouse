@@ -344,9 +344,8 @@ bullet Keluaran).
   sebagai SATU berkas di folder `hasil_analisis/` (tidak digabung): `01_reward`,
   `02_success_rate_epsilon`, `03_langkah_episode_sukses`, `04_komposisi_hasil`,
   `05_langkah_area_bahaya`, `06_jumlah_state`, `07_jalur_evaluasi`, `08_titik_akhir`,
-  `09_tabrakan_pinggir_tengah`, `10-12_heatmap_tabrakan_{semua,paruh_awal,paruh_akhir}`
-  (skala warna sama), `ringkasan.txt` (angka-angka), dan `13_animasi_jalur_evaluasi.gif`
-  bila `--gif`. `python analisis.py` -> nama tanpa akhiran; `--best` -> berakhiran
+  `09_tabrakan_pinggir_tengah`, `10_heatmap_tabrakan` (satu heatmap, semua episode),
+  `ringkasan.txt` (angka-angka), dan `11_animasi_jalur_evaluasi.gif` bila `--gif`. `python analisis.py` -> nama tanpa akhiran; `--best` -> berakhiran
   `_best` dan membaca file `*_best`. Opsi lain: `--last N`, `--from N`, `--window`,
   `--bins`, `--edge`, `--csv`, `--eval`, `--outdir`.
   **Yang di-push hanya**: kode (`arena_env.py`, `continuous_qlearning.py`,

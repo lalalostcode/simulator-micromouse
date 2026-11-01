@@ -4,18 +4,17 @@
 Pakai (dari folder ini, di luar Webots):
     python analisis.py                  # episode_log.csv + eval_result.json -> hasil_analisis/*.png
     python analisis.py --best           # file *_best -> hasil_analisis/*_best.png  (yang di-push)
-    python analisis.py --best --gif     # tambah hasil_analisis/13_animasi_jalur_evaluasi_best.gif
+    python analisis.py --best --gif     # tambah hasil_analisis/11_animasi_jalur_evaluasi_best.gif
     python analisis.py --last 500       # hanya 500 episode terakhir
     python analisis.py --from 400       # mulai dari episode 400
     python analisis.py --outdir X       # folder keluaran lain (bawaan hasil_analisis)
 
 Berkas yang dibuat (tiap grafik terpisah, awalan nomor):
     01_reward              05_langkah_area_bahaya      09_tabrakan_pinggir_tengah
-    02_success_rate_epsilon 06_jumlah_state            10_heatmap_tabrakan_semua
-    03_langkah_episode_sukses 07_jalur_evaluasi        11_heatmap_tabrakan_paruh_awal
-    04_komposisi_hasil     08_titik_akhir              12_heatmap_tabrakan_paruh_akhir
-    ringkasan.txt (angka-angka ringkasan), 13_animasi_jalur_evaluasi.gif (bila --gif)
-Tiap nama berakhiran _best bila memakai --best. Heatmap 10-12 memakai skala warna sama.
+    02_success_rate_epsilon 06_jumlah_state            10_heatmap_tabrakan
+    03_langkah_episode_sukses 07_jalur_evaluasi        ringkasan.txt (angka-angka ringkasan)
+    04_komposisi_hasil     08_titik_akhir              11_animasi_jalur_evaluasi.gif (bila --gif)
+Tiap nama berakhiran _best bila memakai --best.
 Peta (rintangan, area bahaya, start, target) dibaca dari eval_result*.json.
 """
 import argparse
@@ -360,26 +359,18 @@ def main():
     save_one(outdir, "08_titik_akhir", sfx, square, lambda ax: panel_endpoints(ax, d, lay))
     save_one(outdir, "09_tabrakan_pinggir_tengah", sfx, wide, lambda ax: panel_edge_bar(ax, d, lay, a.edge))
     if d["x"] is not None:
-        n = len(d["ep"])
-        half = n // 2
-        idx = np.arange(n)
         col = d["out"] == "collision"
-        parts = [("10_heatmap_tabrakan_semua", "Heatmap tabrakan: semua episode", np.ones(n, bool)),
-                 ("11_heatmap_tabrakan_paruh_awal", f"Heatmap tabrakan: paruh awal (ep {d['ep'][0]}-{d['ep'][max(half - 1, 0)]})", idx < half),
-                 ("12_heatmap_tabrakan_paruh_akhir", f"Heatmap tabrakan: paruh akhir (ep {d['ep'][half] if half < n else d['ep'][-1]}-{d['ep'][-1]})", idx >= half)]
-        hs = [heat_hist(d, lay, a.bins, col & part) for _, _, part in parts]
-        vmax = max(1, max(h.max() for h in hs))          # skala warna sama di ketiga heatmap
+        h = heat_hist(d, lay, a.bins, col)
+        vmax = max(1, h.max())
 
-        def heat_draw(title, part, h):
-            def draw(ax):
-                im = panel_heat(ax, d, lay, h, vmax, f"{title}: {int((col & part).sum())} tabrakan", part)
-                ax.figure.colorbar(im, ax=ax, fraction=.046, pad=.02, label="tabrakan per kotak (skala sama)")
-            return draw
+        def draw_heat(ax):
+            im = panel_heat(ax, d, lay, h, vmax, f"Heatmap tabrakan: semua episode, {int(col.sum())} tabrakan",
+                            np.ones(len(d["ep"]), bool))
+            ax.figure.colorbar(im, ax=ax, fraction=.046, pad=.02, label="tabrakan per kotak")
 
-        for (name, title, part), h in zip(parts, hs):
-            save_one(outdir, name, sfx, square, heat_draw(title, part, h))
+        save_one(outdir, "10_heatmap_tabrakan", sfx, square, draw_heat)
     else:
-        print("log tanpa kolom end_x/end_y: grafik 08-12 dilewati/tidak lengkap")
+        print("log tanpa kolom end_x/end_y: grafik 08-10 dilewati/tidak lengkap")
 
     # ---- ringkasan angka
     txt = "\n".join(summary_lines(d, lay, W, a.edge)) + "\n"
@@ -387,7 +378,7 @@ def main():
     print("ditulis:", outdir / f"ringkasan{sfx}.txt")
 
     if a.gif:
-        make_gif(lay, a.episode, outdir / f"13_animasi_jalur_evaluasi{sfx}.gif")
+        make_gif(lay, a.episode, outdir / f"11_animasi_jalur_evaluasi{sfx}.gif")
 
 
 if __name__ == "__main__":
