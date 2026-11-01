@@ -350,9 +350,9 @@ bullet Keluaran).
   `_best` dan membaca file `*_best`. Opsi lain: `--last N`, `--from N`, `--window`,
   `--bins`, `--edge`, `--csv`, `--eval`, `--outdir`.
   **Yang di-push hanya**: kode (`arena_env.py`, `continuous_qlearning.py`,
-  `analisis.py`), tiga file `*_best`, dan `hasil_analisis/*_best.png` +
+  `analisis.py`), tiga file `*_best`, dan `hasil_analisis/*_best.png`, `*_best.gif`,
   `ringkasan_best.txt`. Keluaran biasa (`qtable_state.pkl`, `episode_log.csv`,
-  `eval_result.json`, grafik tanpa `_best`, `*.gif`) masuk `.gitignore`: boleh ada lokal
+  `eval_result.json`, grafik/GIF tanpa `_best`) masuk `.gitignore`: boleh ada lokal
   tetapi tidak ikut git. Setelah training yang bagus: salin tiga file ke `_best`, lalu
   `python analisis.py --best` sebelum commit. Riwayat git lama (commit bbf8a79) masih
   menyimpan versi biasa dan skrip plot lama (`plot_training.py`, `visualize_path.py`,

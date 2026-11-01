@@ -18,13 +18,14 @@ sim/webots/**/run_log.txt
 sim/webots/**/qlearning/episode_log.csv
 sim/webots/**/qlearning/qtable_state.pkl
 
-# Webots continuous_qlearning: hanya hasil *_best (data) + hasil_analisis/*_best.png dan
-# ringkasan_best.txt yang di-push. Keluaran training biasa (dibuat ulang tiap run), grafik
-# tanpa _best, dan GIF opsional boleh ada lokal tetapi tidak ikut git.
+# Webots continuous_qlearning: hanya hasil *_best (data) + hasil_analisis/*_best.png, *_best.gif
+# dan ringkasan_best.txt yang di-push. Keluaran training biasa (dibuat ulang tiap run) dan
+# grafik/GIF tanpa _best boleh ada lokal tetapi tidak ikut git.
 sim/webots/**/continuous_qlearning/qtable_state.pkl
 sim/webots/**/continuous_qlearning/episode_log.csv
 sim/webots/**/continuous_qlearning/eval_result.json
 sim/webots/**/continuous_qlearning/hasil_analisis/*.png
 !sim/webots/**/continuous_qlearning/hasil_analisis/*_best.png
 sim/webots/**/continuous_qlearning/hasil_analisis/*.gif
+!sim/webots/**/continuous_qlearning/hasil_analisis/*_best.gif
 sim/webots/**/continuous_qlearning/hasil_analisis/ringkasan.txt
