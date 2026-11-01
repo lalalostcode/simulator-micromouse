@@ -278,6 +278,83 @@ mana saja. Jadi simulator ini cuma cocok buat latihan gaya "classic".
   manapun (termasuk 3.13 yang dipakai di mesin ini) langsung jalan selama
   dilaunch oleh Webots sendiri (bukan dari terminal luar/`extern`).
 
+## webots continuous_qlearning — tugas terpisah (arena kontinu, tanpa grid)
+
+Tugas kuliah yang berdiri sendiri, di luar aturan micromouse konvensional: robot
+micromouse yang sama (IR FL/FR/DL/DR, gyro, encoder) belajar dengan **Q-learning
+tabular murni** menemukan dan mencapai area target di arena kontinu 2,4 x 2,4 m
+berisi rintangan. Minggu berikutnya direncanakan DQN di atas world/aksi/reward yang
+sama (cukup ganti `discretize()` + Q-table). Kode di
+`sim/webots/micromouse_webots/controllers/continuous_qlearning/`, dunia
+`worlds/micromouse_continuous.wbt`, generator `tools/make_continuous_world.py`.
+Hasil run + `*_best` ikut di-track di git (seperti q-learning mms).
+
+- **Menjalankan**: buka `micromouse_continuous.wbt` di aplikasi Webots, Reset, klik
+  Fast. Variabel lingkungan (`MM_EPISODES`, `MM_SEED`, `MM_PATIENCE`,
+  `MM_START_HEADING`, `MM_EVAL_ONLY`, `MICROMOUSE_QUIT`) TIDAK terbaca bila Webots
+  dibuka dari GUI; ubah konstanta di atas `continuous_qlearning.py` /
+  `arena_env.py`. Uji headless: `webots.exe --batch --no-rendering --mode=fast
+  --minimize --stdout --stderr <world>` dengan `MICROMOUSE_QUIT=1`.
+- **Tata letak diatur di GUI Webots**, bukan di kode: `read_world_layout()` membaca
+  node di world saat controller mulai. Aturan nama Solid: `bahaya*` = area bahaya
+  (cakram tipis tanpa hitbox, reward minus), `target` = area target, Solid lain yang
+  punya `boundingObject` (selain `floor`/`wall*`) = rintangan (Cylinder, Box,
+  prisma IndexedFaceSet). Pose awal robot = pose robot di world. Radius/ukuran dibaca
+  dari geometri. Geometri visual dan hitbox adalah SATU node (`DEF GEO_<nama>` /
+  `boundingObject USE GEO_<nama>`), jadi mengubah ukuran di Scene Tree otomatis
+  mengubah hitbox (sebelumnya terpisah: visual dibesarkan, hitbox tidak, robot
+  "menembus"). `make_continuous_world.py` menolak menimpa world yang ada tanpa
+  `--force` (perubahan dari GUI akan hilang). **Tekan Reset sebelum Ctrl+S**:
+  world pernah tersimpan saat robot sudah jatuh (z ~ -7e9, kecepatan -368 km/s).
+- **Mode** `arena_env.TARGET_KNOWN` (bawaan **False**): robot TIDAK diberi koordinat
+  target maupun area bahaya. State = `(FL, FR, DL, DR, sel_x, sel_y, arah_hadap)`:
+  FL/FR 3 tingkat (ADC >=1150 / >=470 / lainnya, ~<40/40-80/>80 mm dari moncong),
+  DL/DR 2 tingkat (>=600), posisi dari odometri (encoder + gyro, pose awal
+  diketahui) dalam sel 0,3 m, arah hadap 8 bin (0 = timur, 2 = utara) -> 18.432
+  kombinasi. `True`: state memuat arah/jarak ke target + fitur zona bahaya (8640
+  kombinasi) dan reward progres mendekati target (`R_PROGRESS`).
+  Posisi asli (Supervisor) hanya untuk reward, deteksi goal/tabrakan/macet/bahaya, log.
+- **Aksi** 5 pasangan kecepatan roda riil (rad/s): lurus (10,10), maju-kiri (6,10),
+  maju-kanan (10,6), putar-kiri (-4,4), putar-kanan (4,-4); satu keputusan = 8 x 16 ms
+  (128 ms, ~1,9 cm). Tidak ada aksi berhenti/pelan.
+- **Reward**: goal +100 (pusat robot masuk area target, radius 0,25 m), tabrakan -100
+  (episode selesai), macet -30 (perpindahan < 8 cm dalam 20 keputusan -> episode
+  selesai, hasil `stuck`), timeout -20 (800 keputusan; 400 bila TARGET_KNOWN), -0,05
+  per langkah, putar -0,10, area bahaya -3 per keputusan, bonus sel baru per episode
+  +0,3 (dekat start) naik linear ke +1,5 (sudut terjauh). Mengapa macet diakhiri
+  cepat: penalti timeout di langkah ke-800 hilang oleh diskon gamma 0,95 sehingga
+  tidak terasa dari dalam siklus.
+- **Hiperparameter**: alpha 0,3, gamma 0,95, epsilon 1,0 -> 0,05 (decay 0,9985; 0,997
+  bila TARGET_KNOWN), `EPISODES` 6000 (3000), konvergen bila success rate 50 episode
+  >= 0,95, `PATIENCE` 800 (400) dihitung HANYA setelah epsilon mencapai minimum
+  (reward jarang: success rate ~0 di awal, patience lama berhenti terlalu dini).
+  Arah awal acak per episode training: `START_HEADING_DEFAULT` = 0-90 derajat kompas
+  (0 = utara, 90 = timur); None = pakai arah robot di world.
+- **Evaluasi akhir**: greedy (epsilon 0) dari `EVAL_HEADINGS` (0, 22,5, 45, 67,5, 90)
+  x2, memakai Q-table dengan success rate 50-episode tertinggi (bukan yang terakhir).
+- **Keluaran** (folder controller): `episode_log.csv` (episode, epsilon, decisions,
+  reward, outcome, hazard_steps, sim_time, states, start_heading, end_x, end_y),
+  `qtable_state.pkl`, `eval_result.json`, `layout.json`. Konvensi `_best`: user
+  menyalin ke `qtable_state_best.pkl`, `episode_log_best.csv`, `eval_result_best.json`
+  agar tak tertimpa; `MM_EVAL_ONLY` / konstanta `EVAL_ONLY` memuat `qtable_state_best.pkl`.
+  Analisis (jalankan di luar Webots): `plot_training.py` (6 panel), `visualize_path.py`
+  (`--gif`, `--episode N`), `plot_endpoints.py` (posisi akhir, pinggir vs tengah),
+  `plot_collision_heatmap.py`; tiap skrip punya `--best` / `--csv` bila relevan.
+- **Hasil** (seed 7, TARGET_KNOWN=False, peta di commit bbf8a79): konvergen di episode
+  2007 (success rate 0,96, 1429 state dikunjungi), evaluasi greedy **10/10** sampai
+  target (182-196 keputusan), tanpa menyentuh area bahaya; satu rute (susur bawah lalu
+  naik sisi timur). Tanpa bonus eksplorasi jarak + patience yang diperbaiki, run
+  serupa hanya 4 goal dalam 1164 episode dan evaluasi 0/10.
+- **Temuan**: (1) sensor IR cukup — aturan reaktif sederhana 0 tabrakan dari 240
+  episode di tiga kecepatan, jadi tabrakan sering di awal training berasal dari aksi
+  acak epsilon dan Q-table yang belum belajar, bukan dari kecepatan atau sensor.
+  (2) Q-table khusus satu tata letak; ganti peta = training ulang. (3) Satu proses
+  Webots menulis hasil pada satu waktu: dua sesi bersamaan merusak `episode_log.csv`
+  (padding NUL); skrip plot menyaring baris rusak. (4) Dengan reward progres ke
+  target, robot condong lewat tengah dan menumpuk tabrakan di rintangan jalur lurus.
+- Pekerjaan rule-based teman (controllers/rule_based, micromouse_rule_based.wbt, versi
+  baru micromouse_controller.py) belum di-commit; user minta teman yang push.
+
 ## Hardware — catatan dari review skematik
 
 - MCU: STM32F401CCU6 Blackpill. Footprint EasyEDA yang dipakai bernama
