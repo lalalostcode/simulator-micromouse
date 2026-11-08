@@ -20,8 +20,7 @@ EVALUASI GREEDY (epsilon 0)
 100 EPISODE TERAKHIR
   hasil              : goal 94, collision 6, stuck 0, timeout 0
   keputusan per goal : rata-rata 219 (min 187, maks 271)
-  pengaman / pemecah : 0 / 0.0 per episode; pemutus orbit 0.00 per episode
-  porsi greedy       : 88% keputusan
+  mode               : DQN murni (tanpa pengaman, pemecah, pemutus orbit)
   Q rata-rata        : 2.93 (batas atas target 8; menempel di batas = tanda optimis)
   aksi dijalankan    : 0=52%, 1=4%, 2=9%, 3=9%, 4=6%, 5=5%, 6=5%, 7=6%, 8=2%, 9=2%
   titik gagal terbanyak (jenis, x, y): ('collision', 2.0, 0.8) x2; ('collision', 1.1, 0.4) x1; ('collision', 0.4, 0.6) x1; ('collision', 0.9, 0.5) x1; ('collision', 1.9, 0.7) x1

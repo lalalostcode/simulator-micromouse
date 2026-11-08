@@ -14,9 +14,11 @@ Pakai (dari folder ini, di luar Webots):
 
 Berkas yang dibuat:
     01_reward                 05_langkah_area_bahaya      09_tabrakan_pinggir_tengah   13_porsi_aksi
-    02_success_rate_epsilon   06_q_rata_rata              10_heatmap_tabrakan          14_porsi_greedy
+    02_success_rate_epsilon   06_q_rata_rata              10_heatmap_tabrakan          ringkasan.txt
     03_langkah_episode_sukses 07_jalur_evaluasi           11_animasi_jalur_evaluasi.gif (--gif)
-    04_komposisi_hasil        08_titik_akhir              12_pengaman_pemecah          ringkasan.txt
+    04_komposisi_hasil        08_titik_akhir
+Hanya bila lapisan buatan aktif (log punya pengaman/pemecah/putaran > 0, mode PURE_DQN=False):
+    12_pengaman_pemecah, 14_porsi_greedy  (di mode murni dilewati: 12 selalu 0, 14 = 1 - epsilon).
 Tiap nama berakhiran _best bila memakai --best.
 """
 import argparse
@@ -62,6 +64,11 @@ def load_dqn(path):
         d["x"] = d["y"] = None
     d["aksi"] = np.stack([col(f"aksi_{i}") for i in range(10)], 1)
     return d
+
+
+def has_layers(d):
+    """True bila lapisan buatan pernah aktif (mode PURE_DQN=False)."""
+    return float(d["pengaman"].sum() + d["pemecah"].sum() + d["putaran"].sum()) > 0
 
 
 def panel_q(ax, d, W):
@@ -147,9 +154,12 @@ def summary(d, lay, W, edge):
     if g.any():
         dec = d["dec"][tail][g]
         L.append(f"  keputusan per goal : rata-rata {dec.mean():.0f} (min {dec.min()}, maks {dec.max()})")
-    L.append(f"  pengaman / pemecah : {d['pengaman'][tail].mean():.0f} / {d['pemecah'][tail].mean():.1f} per episode; "
-             f"pemutus orbit {d['putaran'][tail].mean():.2f} per episode")
-    L.append(f"  porsi greedy       : {(d['greedy'][tail] / np.maximum(d['dec'][tail], 1)).mean() * 100:.0f}% keputusan")
+    if has_layers(d):
+        L.append(f"  pengaman / pemecah : {d['pengaman'][tail].mean():.0f} / {d['pemecah'][tail].mean():.1f} per episode; "
+                 f"pemutus orbit {d['putaran'][tail].mean():.2f} per episode")
+        L.append(f"  porsi greedy       : {(d['greedy'][tail] / np.maximum(d['dec'][tail], 1)).mean() * 100:.0f}% keputusan")
+    else:
+        L.append("  mode               : DQN murni (tanpa pengaman, pemecah, pemutus orbit)")
     if d["q"] is not None:
         q = d["q"][tail]
         L.append(f"  Q rata-rata        : {q.mean():.2f} (batas atas target {Y_MAX:g}; menempel di batas = tanda optimis)")
@@ -217,9 +227,12 @@ def main():
             ax.figure.colorbar(im, ax=ax, fraction=.046, pad=.02, label="tabrakan per kotak")
 
         save_one(outdir, "10_heatmap_tabrakan", sfx, square, draw_heat)
-    save_one(outdir, "12_pengaman_pemecah", sfx, wide, lambda ax: panel_intervensi(ax, d, W))
     save_one(outdir, "13_porsi_aksi", sfx, (11, 5.5), lambda ax: panel_aksi(ax, d, W))
-    save_one(outdir, "14_porsi_greedy", sfx, wide, lambda ax: panel_greedy(ax, d, W))
+    if has_layers(d):
+        save_one(outdir, "12_pengaman_pemecah", sfx, wide, lambda ax: panel_intervensi(ax, d, W))
+        save_one(outdir, "14_porsi_greedy", sfx, wide, lambda ax: panel_greedy(ax, d, W))
+    else:
+        print("mode DQN murni: grafik 12 (pengaman/pemecah) dan 14 (porsi greedy) dilewati")
 
     txt = "\n".join(summary(d, lay, W, a.edge)) + "\n"
     (outdir / f"ringkasan{sfx}.txt").write_text(txt, encoding="utf-8")
