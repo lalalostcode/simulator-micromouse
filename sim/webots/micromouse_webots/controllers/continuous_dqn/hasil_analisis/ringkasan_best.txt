@@ -1,0 +1,39 @@
+RINGKASAN TRAINING
+  episode            : 1436 (ep 1-1436)
+  hasil              : goal 431 (30%), tabrakan 335, macet 583, timeout 87
+  success rate maks  : 0.96 (jendela 50) di episode 1436
+  epsilon akhir      : 0.12
+  langkah di bahaya  : rata-rata 0.7 per episode
+
+TABRAKAN: pinggir (< 0.4 m dari dinding) vs tengah
+  335 tabrakan: pinggir 222 (66%), tengah 113 (34%)
+
+EVALUASI GREEDY (epsilon 0)
+  sampai target      : 10/10
+  arah   0.0 deg    : 2/2 goal
+  arah  22.5 deg    : 2/2 goal
+  arah  45.0 deg    : 2/2 goal
+  arah  67.5 deg    : 2/2 goal
+  arah  90.0 deg    : 2/2 goal
+  langkah (goal)     : 166-181 keputusan (~23 s)
+
+100 EPISODE TERAKHIR
+  hasil              : goal 94, collision 6, stuck 0, timeout 0
+  keputusan per goal : rata-rata 219 (min 187, maks 271)
+  pengaman / pemecah : 0 / 0.0 per episode; pemutus orbit 0.00 per episode
+  porsi greedy       : 88% keputusan
+  Q rata-rata        : 2.93 (batas atas target 8; menempel di batas = tanda optimis)
+  aksi dijalankan    : 0=52%, 1=4%, 2=9%, 3=9%, 4=6%, 5=5%, 6=5%, 7=6%, 8=2%, 9=2%
+  titik gagal terbanyak (jenis, x, y): ('collision', 2.0, 0.8) x2; ('collision', 1.1, 0.4) x1; ('collision', 0.4, 0.6) x1; ('collision', 0.9, 0.5) x1; ('collision', 1.9, 0.7) x1
+
+EVALUASI PER ARAH (detail uji)
+  arah   0.0: goal       174 keputusan, hazard 0
+  arah   0.0: goal       173 keputusan, hazard 0
+  arah  22.5: goal       174 keputusan, hazard 0
+  arah  22.5: goal       174 keputusan, hazard 0
+  arah  45.0: goal       169 keputusan, hazard 0
+  arah  45.0: goal       169 keputusan, hazard 0
+  arah  67.5: goal       166 keputusan, hazard 0
+  arah  67.5: goal       168 keputusan, hazard 0
+  arah  90.0: goal       181 keputusan, hazard 0
+  arah  90.0: goal       181 keputusan, hazard 0

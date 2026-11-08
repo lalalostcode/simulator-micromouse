@@ -53,6 +53,7 @@ ACTIONS = (
     (4.0, -4.0),     # 4 putar kanan di tempat
 )
 ACTION_NAMES = ("lurus", "maju-kiri", "maju-kanan", "putar-kiri", "putar-kanan")
+SPIN_ACTIONS = (3, 4)     # indeks aksi yang dikenai R_SPIN (DQN menimpa ACTIONS dan SPIN_ACTIONS)
 
 # Batas bin sensor IR (nilai ADC, makin besar makin dekat; urutan dari terdekat).
 # FL/FR (lurus ke depan), jarak moncong robot ke rintangan hasil ukur respons sensor:
@@ -77,7 +78,11 @@ _NPOS = [8]                           # jumlah sel per sumbu; diisi ArenaEnv dar
 
 # Reward
 R_GOAL = 100.0
+R_GOAL_TIME = 0.0         # bonus goal cepat: R_GOAL + R_GOAL_TIME * (1 - keputusan / GOAL_TIME_REF)
+GOAL_TIME_REF = None      # patokan jumlah keputusan untuk bonus waktu; None = MAX_DECISIONS (bawaan lama)
 R_COLLISION = -100.0
+R_COLLISION_NEAR = 0.0    # tambahan penalti tabrakan dekat start: -R_COLLISION_NEAR * (1 - jarak_dari_start / COLLISION_NEAR_DIST)
+COLLISION_NEAR_DIST = 1.0 # m: tabrakan lebih jauh dari ini kena penalti R_COLLISION saja
 R_STEP = -0.05
 R_SPIN = -0.10            # penalti kecil untuk putar di tempat (supaya tidak berputar terus)
 R_TIMEOUT = -20.0         # penalti saat waktu episode habis (berputar-putar tidak lebih aman dari menabrak)
@@ -90,6 +95,26 @@ R_EXPLORE_FAR = 1.5       # sel terjauh (sudut arena yang berlawanan dari start)
 R_STUCK = -30.0           # episode diakhiri bila robot macet (lihat STUCK_*)
 STUCK_WINDOW = 20         # jumlah keputusan terakhir yang diperiksa (~2,6 detik)
 STUCK_DIST = 0.08         # m: perpindahan bersih di bawah ini selama STUCK_WINDOW = macet
+# Hukuman yang membesar di titik yang sering macet (0 = mati; Q-learning tidak memakainya).
+HOT_RADIUS = 0.15         # m: kejadian macet dalam radius ini dihitung satu titik
+STUCK_GROW = 0.0          # tambahan penalti macet per kejadian sebelumnya di titik itu
+STUCK_GROW_CAP = 100.0    # batas tambahan penalti macet
+ZONE_STEP = 0.0           # penalti per keputusan di dalam titik macet, per kejadian sebelumnya
+ZONE_CAP = 1.0            # batas penalti per keputusan
+# Hal yang sama untuk titik TABRAKAN berulang (0 = mati; radius titik = HOT_RADIUS).
+COLL_GROW = 0.0           # tambahan penalti tabrakan per tabrakan sebelumnya di titik itu
+COLL_GROW_CAP = 50.0      # batas tambahan penalti tabrakan
+COLL_ZONE_STEP = 0.0      # penalti per keputusan di dalam titik tabrakan, per tabrakan sebelumnya
+COLL_ZONE_CAP = 1.0       # batas penalti per keputusan
+GROW_RATE = 1.0           # 1.0 = pertumbuhan linear (unit x n); > 1 = geometris: kenaikan tiap kejadian dikali GROW_RATE
+
+
+def grow(unit, n):
+    """Penalti tambahan setelah n kejadian: linear unit*n bila GROW_RATE == 1, selain itu jumlah deret geometris
+    unit * (GROW_RATE**n - 1) / (GROW_RATE - 1) (kenaikan ke-k = unit * GROW_RATE**(k-1))."""
+    if GROW_RATE == 1.0:
+        return unit * n
+    return unit * (GROW_RATE ** n - 1.0) / (GROW_RATE - 1.0)
 MAX_DECISIONS = 400 if TARGET_KNOWN else 800
 
 
@@ -248,12 +273,33 @@ class ArenaEnv:
         self._last_enc = [0.0, 0.0]
         self._prev_dist = 0.0
         self.sim_time0 = self.robot.getTime()
+        # Titik macet berulang, bertahan antar episode selama controller hidup: [x, y, jumlah kejadian].
+        self.hotspots = []                # titik macet
+        self.crash_spots = []             # titik tabrakan
+        self.record_stuck = True          # False saat evaluasi: kejadian macet/tabrakan tidak dicatat
 
     # ---------------- dunia -----------------
     def true_pose(self):
         x, y, _ = self.me.getPosition()
         o = self.me.getOrientation()
         return x, y, math.atan2(o[3], o[0])
+
+    def _hot(self, x, y, spots=None):
+        """Titik kejadian berulang (macet, atau tabrakan bila spots=self.crash_spots) yang mencakup
+        (x, y) dalam radius HOT_RADIUS, atau None."""
+        for h in (self.hotspots if spots is None else spots):
+            if math.hypot(x - h[0], y - h[1]) <= HOT_RADIUS:
+                return h
+        return None
+
+    def _register(self, spots, x, y):
+        h = self._hot(x, y, spots)
+        if h:
+            h[2] += 1
+            h[0] += (x - h[0]) / h[2]          # posisi titik = rata-rata kejadian
+            h[1] += (y - h[1]) / h[2]
+        else:
+            spots.append([x, y, 1])
 
     def _in_hazard(self, x, y):
         return any(math.hypot(x - hx, y - hy) < hr for hx, hy, hr in self.layout["hazards"])
@@ -372,23 +418,44 @@ class ArenaEnv:
             if cell not in self._visited:
                 self._visited.add(cell)
                 reward += self._explore_bonus(cell)
-        if action >= 3:
+        if action in SPIN_ACTIONS:
             reward += R_SPIN
         self._prev_dist = d
         x, y, _ = self.true_pose()
         if self._in_hazard(x, y):
             reward += R_HAZARD
             self.hazard_steps += 1
+        hot = self._hot(x, y)
+        crash = self._hot(x, y, self.crash_spots)
+        pen = 0.0
+        if hot and ZONE_STEP > 0:
+            pen = min(grow(ZONE_STEP, hot[2]), ZONE_CAP)     # tekanan per keputusan di titik yang sering macet
+        if crash and COLL_ZONE_STEP > 0:
+            pen = max(pen, min(grow(COLL_ZONE_STEP, crash[2]), COLL_ZONE_CAP))     # ... atau sering tabrakan
+        reward -= pen
         self._pos_hist.append((x, y))
         stuck = (len(self._pos_hist) > STUCK_WINDOW and math.hypot(
             x - self._pos_hist[-1 - STUCK_WINDOW][0], y - self._pos_hist[-1 - STUCK_WINDOW][1]) < STUCK_DIST)
         outcome = None
         if collided:
-            reward, outcome = R_COLLISION, "collision"
+            # R_COLLISION_NEAR > 0: tabrakan dekat titik start lebih berat (0 = penalti tetap)
+            d0 = math.hypot(x - self.start[0], y - self.start[1])
+            n_crash = crash[2] if crash else 0
+            reward = (R_COLLISION - R_COLLISION_NEAR * (1.0 - min(d0 / COLLISION_NEAR_DIST, 1.0))
+                      - min(grow(COLL_GROW, n_crash), COLL_GROW_CAP))     # makin sering menabrak di titik ini, makin berat
+            outcome = "collision"
+            if self.record_stuck:
+                self._register(self.crash_spots, x, y)
         elif d <= self.target_r:
-            reward, outcome = R_GOAL, "goal"
+            # R_GOAL_TIME > 0: goal lebih cepat, imbalan lebih besar (0 = imbalan goal tetap)
+            reward = R_GOAL + R_GOAL_TIME * max(0.0, 1.0 - self.n_decisions / (GOAL_TIME_REF or MAX_DECISIONS))
+            outcome = "goal"
         elif stuck:
-            reward, outcome = R_STUCK, "stuck"
+            n_hot = hot[2] if hot else 0
+            reward = R_STUCK - min(grow(STUCK_GROW, n_hot), STUCK_GROW_CAP)    # makin sering macet di titik ini, makin berat
+            outcome = "stuck"
+            if self.record_stuck:
+                self._register(self.hotspots, x, y)
         elif self.n_decisions >= MAX_DECISIONS:
             reward += R_TIMEOUT
             outcome = "timeout"

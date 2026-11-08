@@ -1,0 +1,1086 @@
+#VRML_SIM R2025a utf8
+
+WorldInfo {
+  basicTimeStep 16
+}
+Viewpoint {
+  orientation -0.4810897083156052 0.5240706317726995 0.7027820896025805 1.8296134995586844
+  position 0.6402071320309366 -2.473405090057262 8.733023258955313
+}
+Background {
+  skyColor [
+    0.75 0.82 0.92
+  ]
+}
+DirectionalLight {
+  ambientIntensity 0.5
+  direction -0.3 -0.4 -1
+  intensity 1.6
+}
+Solid {
+  translation 1.2 1.2 -0.005
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.8 0.8 0.78
+        roughness 1
+      }
+      geometry Box {
+        size 2.5 2.5 0.01
+      }
+    }
+  ]
+  name "floor"
+  boundingObject Box {
+    size 2.5 2.5 0.01
+  }
+}
+Solid {
+  translation 1.2 -0.006 0.025
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.85 0.1 0.1
+        roughness 1
+        metalness 0
+      }
+      geometry Box {
+        size 2.424 0.012 0.05
+      }
+    }
+  ]
+  name "wall_s"
+  boundingObject Box {
+    size 2.424 0.012 0.05
+  }
+}
+Solid {
+  translation 1.2 2.406 0.025
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.85 0.1 0.1
+        roughness 1
+        metalness 0
+      }
+      geometry Box {
+        size 2.424 0.012 0.05
+      }
+    }
+  ]
+  name "wall_n"
+  boundingObject Box {
+    size 2.424 0.012 0.05
+  }
+}
+Solid {
+  translation -0.006 1.2 0.025
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.85 0.1 0.1
+        roughness 1
+        metalness 0
+      }
+      geometry Box {
+        size 0.012 2.4 0.05
+      }
+    }
+  ]
+  name "wall_w"
+  boundingObject Box {
+    size 0.012 2.4 0.05
+  }
+}
+Solid {
+  translation 2.406 1.2 0.025
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.85 0.1 0.1
+        roughness 1
+        metalness 0
+      }
+      geometry Box {
+        size 0.012 2.4 0.05
+      }
+    }
+  ]
+  name "wall_e"
+  boundingObject Box {
+    size 0.012 2.4 0.05
+  }
+}
+Solid {
+  translation 0.19 0.2 0.0005
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.3 0.5 0.95
+        roughness 1
+        metalness 0
+      }
+      geometry Cylinder {
+        height 0.001
+        radius 0.18
+      }
+    }
+  ]
+  name "pad_start"
+}
+Solid {
+  translation 0.81 1.42 0.0007
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.95 0.45 0.1
+        roughness 1
+        metalness 0
+      }
+      geometry Cylinder {
+        height 0.001
+        radius 0.3
+      }
+    }
+  ]
+  name "bahaya_1"
+}
+Solid {
+  translation 1.56 1.01 0.0007
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.95 0.45 0.1
+        roughness 1
+        metalness 0
+      }
+      geometry Cylinder {
+        height 0.001
+        radius 0.22
+      }
+    }
+  ]
+  name "bahaya_2"
+}
+DEF TARGET Solid {
+  translation 2.1 2.1 0.001
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.1 0.8 0.2
+        roughness 1
+      }
+      geometry Cylinder {
+        height 0.001
+        radius 0.25
+      }
+    }
+  ]
+  name "target"
+}
+Solid {
+  translation 1.63324 0.227252 0.025
+  rotation 0 0 -1 -0.49999530717958596
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.55 0.4 0.25
+        roughness 1
+        metalness 0
+      }
+      geometry DEF GEO_persegi_panjang_1 Box {
+        size 0.59 0.15 0.05
+      }
+    }
+  ]
+  name "persegi_panjang_1"
+  boundingObject USE GEO_persegi_panjang_1
+}
+Solid {
+  translation 2.13 0.55 0.025
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.35 0.35 0.4
+        roughness 1
+        metalness 0
+      }
+      geometry DEF GEO_lingkaran_kecil_1 Cylinder {
+        height 0.05
+        radius 0.25
+      }
+    }
+  ]
+  name "lingkaran_kecil_1"
+  boundingObject USE GEO_lingkaran_kecil_1
+}
+Solid {
+  translation 0.21 0.85 0.025
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.55 0.4 0.25
+        roughness 1
+        metalness 0
+      }
+      geometry DEF GEO_persegi_kecil Box {
+        size 0.4 0.35 0.05
+      }
+    }
+  ]
+  name "persegi_kecil"
+  boundingObject USE GEO_persegi_kecil
+}
+Solid {
+  translation -0.1 0.33 0
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.45 0.3 0.55
+        roughness 1
+        metalness 0
+      }
+      geometry DEF GEO_segitiga_2 IndexedFaceSet {
+        coord Coordinate {
+          point [
+            0.35 1.55 0
+            0.75 1.7 0
+            0.45 1.95 0
+            0.35 1.55 0.05
+            0.75 1.7 0.05
+            0.45 1.95 0.05
+          ]
+        }
+        coordIndex [
+          0, 2, 1, -1, 3, 4, 5, -1, 0, 1
+          4, 3, -1, 1, 2, 5, 4, -1, 2, 0
+          3, 5, -1
+        ]
+      }
+    }
+  ]
+  name "segitiga_2"
+  boundingObject USE GEO_segitiga_2
+}
+Solid {
+  translation 1.21712 2.20338 0.025
+  rotation 0 0 1 2.5798
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.55 0.4 0.25
+        roughness 1
+        metalness 0
+      }
+      geometry DEF GEO_dinding_panjang Box {
+        size 0.5 0.08 0.05
+      }
+    }
+  ]
+  name "dinding_panjang"
+  boundingObject USE GEO_dinding_panjang
+}
+Solid {
+  translation 1.03462 0.709539 0.025
+  rotation 0 0 1 -1.3561953071795863
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.55 0.4 0.25
+        roughness 1
+        metalness 0
+      }
+      geometry DEF GEO_persegi_panjang_2 Box {
+        size 0.52 0.16 0.05
+      }
+    }
+  ]
+  name "persegi_panjang_2"
+  boundingObject USE GEO_persegi_panjang_2
+}
+Solid {
+  translation 1.31 1.59 0.025
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.35 0.35 0.4
+        roughness 1
+        metalness 0
+      }
+      geometry DEF GEO_lingkaran_kecil_2 Cylinder {
+        height 0.05
+        radius 0.18
+      }
+    }
+  ]
+  name "lingkaran_kecil_2"
+  boundingObject USE GEO_lingkaran_kecil_2
+}
+Robot {
+  translation 0.18005207150754574 0.19351520254444948 0.014486030526585097
+  rotation -4.622586715488412e-05 0.00013195934089305458 0.9999999902249509 0.6738953094854989
+  children [
+    Transform {
+      translation 0 0 -0.014009
+      rotation 0 0 1 -1.5707963
+      scale 0.001 0.001 0.001
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.6627 0.4824 0.3137
+            roughness 0.6
+            metalness 0
+          }
+          geometry Mesh {
+            url [
+              "../meshes/parts/body__color_11107152.obj"
+            ]
+          }
+          castShadows FALSE
+        }
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.702 0.8078 0.8039
+            roughness 0.6
+            metalness 0
+          }
+          geometry Mesh {
+            url [
+              "../meshes/parts/body__color_11783885.obj"
+            ]
+          }
+          castShadows FALSE
+        }
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.0706 0.4118 0.2118
+            roughness 0.6
+            metalness 0
+          }
+          geometry Mesh {
+            url [
+              "../meshes/parts/body__color_1206582.obj"
+            ]
+          }
+          castShadows FALSE
+        }
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.7843 0.8941 0.7412
+            roughness 0.6
+            metalness 0
+          }
+          geometry Mesh {
+            url [
+              "../meshes/parts/body__color_13165757.obj"
+            ]
+          }
+          castShadows FALSE
+        }
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.8667 0.8863 0.8941
+            roughness 0.6
+            metalness 0
+          }
+          geometry Mesh {
+            url [
+              "../meshes/parts/body__color_14541540.obj"
+            ]
+          }
+          castShadows FALSE
+        }
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.8824 0.6784 0.2039
+            roughness 0.6
+            metalness 0
+          }
+          geometry Mesh {
+            url [
+              "../meshes/parts/body__color_14789940.obj"
+            ]
+          }
+          castShadows FALSE
+        }
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.9137 0.1137 0.1765
+            roughness 0.6
+            metalness 0
+          }
+          geometry Mesh {
+            url [
+              "../meshes/parts/body__color_15277357.obj"
+            ]
+          }
+          castShadows FALSE
+        }
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.9725 0.902 0.7176
+            roughness 0.6
+            metalness 0
+          }
+          geometry Mesh {
+            url [
+              "../meshes/parts/body__color_16311991.obj"
+            ]
+          }
+          castShadows FALSE
+        }
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.9804 0.9804 0.9804
+            roughness 0.6
+            metalness 0
+          }
+          geometry Mesh {
+            url [
+              "../meshes/parts/body__color_16448250.obj"
+            ]
+          }
+          castShadows FALSE
+        }
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.098 0.1804 0.3843
+            roughness 0.6
+            metalness 0
+          }
+          geometry Mesh {
+            url [
+              "../meshes/parts/body__color_1650274.obj"
+            ]
+          }
+          castShadows FALSE
+        }
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.9882 0.8471 0.2941
+            roughness 0.6
+            metalness 0
+          }
+          geometry Mesh {
+            url [
+              "../meshes/parts/body__color_16570443.obj"
+            ]
+          }
+          castShadows FALSE
+        }
+        Shape {
+          appearance PBRAppearance {
+            baseColor 1 0.8667 0.102
+            roughness 0.6
+            metalness 0
+          }
+          geometry Mesh {
+            url [
+              "../meshes/parts/body__color_16768282.obj"
+            ]
+          }
+          castShadows FALSE
+        }
+        Shape {
+          appearance PBRAppearance {
+            baseColor 1 0.8941 0.4235
+            roughness 0.6
+            metalness 0
+          }
+          geometry Mesh {
+            url [
+              "../meshes/parts/body__color_16770156.obj"
+            ]
+          }
+          castShadows FALSE
+        }
+        Shape {
+          appearance PBRAppearance {
+            roughness 0.6
+            metalness 0
+          }
+          geometry Mesh {
+            url [
+              "../meshes/parts/body__color_16777215.obj"
+            ]
+          }
+          castShadows FALSE
+        }
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.1255 0.5647 0.302
+            roughness 0.6
+            metalness 0
+          }
+          geometry Mesh {
+            url [
+              "../meshes/parts/body__color_2134093.obj"
+            ]
+          }
+          castShadows FALSE
+        }
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.1686 0.1804 0.1922
+            roughness 0.6
+            metalness 0
+          }
+          geometry Mesh {
+            url [
+              "../meshes/parts/body__color_2829873.obj"
+            ]
+          }
+          castShadows FALSE
+        }
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.2314 0.3333 0.6392
+            roughness 0.6
+            metalness 0
+          }
+          geometry Mesh {
+            url [
+              "../meshes/parts/body__color_3888547.obj"
+            ]
+          }
+          castShadows FALSE
+        }
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.2745 0.7176 0.2863
+            roughness 0.6
+            metalness 0
+          }
+          geometry Mesh {
+            url [
+              "../meshes/parts/body__color_4634441.obj"
+            ]
+          }
+          castShadows FALSE
+        }
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.3804 0.4039 0.4157
+            roughness 0.6
+            metalness 0
+          }
+          geometry Mesh {
+            url [
+              "../meshes/parts/body__color_6383466.obj"
+            ]
+          }
+          castShadows FALSE
+        }
+      ]
+    }
+    DEF LEFT_WHEEL HingeJoint {
+      jointParameters HingeJointParameters {
+        position 385587.38989168784
+        axis 0 1 0
+        anchor 0 0.0373 0
+      }
+      device [
+        RotationalMotor {
+          name "left_wheel_motor"
+          maxVelocity 31.416
+        }
+        PositionSensor {
+          name "left_wheel_sensor"
+        }
+      ]
+      endPoint Solid {
+        translation 0 0.0373 0
+        rotation 7.542178143553635e-15 1 3.4873066933057647e-15 0.873960690975834
+        children [
+          Transform {
+            translation -7e-06 -0.0373 -0.014009
+            rotation 0 0 1 -1.5707963
+            scale 0.001 0.001 0.001
+            children [
+              Shape {
+                appearance PBRAppearance {
+                  baseColor 0.9804 0.9804 0.9804
+                  roughness 0.6
+                  metalness 0
+                }
+                geometry Mesh {
+                  url [
+                    "../meshes/parts/wheel_left__color_16448250.obj"
+                  ]
+                }
+                castShadows FALSE
+              }
+              Shape {
+                appearance PBRAppearance {
+                  baseColor 0.1686 0.1804 0.1922
+                  roughness 0.6
+                  metalness 0
+                }
+                geometry Mesh {
+                  url [
+                    "../meshes/parts/wheel_left__color_2829873.obj"
+                  ]
+                }
+                castShadows FALSE
+              }
+            ]
+          }
+        ]
+        name "left_wheel"
+        boundingObject Pose {
+          rotation 1 0 0 1.5707963
+          children [
+            Cylinder {
+              height 0.0086
+              radius 0.0145
+            }
+          ]
+        }
+        physics Physics {
+        }
+      }
+    }
+    DEF RIGHT_WHEEL HingeJoint {
+      jointParameters HingeJointParameters {
+        position 388406.5977337959
+        axis 0 1 0
+        anchor 0 -0.0373 0
+      }
+      device [
+        RotationalMotor {
+          name "right_wheel_motor"
+          maxVelocity 31.416
+        }
+        PositionSensor {
+          name "right_wheel_sensor"
+        }
+      ]
+      endPoint Solid {
+        translation 0 -0.0373 0
+        rotation 0 1 0 5.2147851825580265
+        children [
+          Transform {
+            translation 0 0.0373 -0.01401
+            rotation 0 0 1 -1.5707963
+            scale 0.001 0.001 0.001
+            children [
+              Shape {
+                appearance PBRAppearance {
+                  baseColor 0.9804 0.9804 0.9804
+                  roughness 0.6
+                  metalness 0
+                }
+                geometry Mesh {
+                  url [
+                    "../meshes/parts/wheel_right__color_16448250.obj"
+                  ]
+                }
+                castShadows FALSE
+              }
+              Shape {
+                appearance PBRAppearance {
+                  baseColor 0.1686 0.1804 0.1922
+                  roughness 0.6
+                  metalness 0
+                }
+                geometry Mesh {
+                  url [
+                    "../meshes/parts/wheel_right__color_2829873.obj"
+                  ]
+                }
+                castShadows FALSE
+              }
+            ]
+          }
+        ]
+        name "right_wheel"
+        boundingObject Pose {
+          rotation 1 0 0 1.5707963
+          children [
+            Cylinder {
+              height 0.0086
+              radius 0.0145
+            }
+          ]
+        }
+        physics Physics {
+        }
+      }
+    }
+    Solid {
+      translation 0.03 0 -0.0115
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.2 0.2 0.2
+          }
+          geometry Sphere {
+            radius 0.003
+          }
+        }
+      ]
+      name "skid"
+    }
+    DistanceSensor {
+      translation 0.0475 0.03 -0.001
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 1 1 0
+          }
+          geometry Box {
+            size 0.005 0.005 0.005
+          }
+        }
+      ]
+      name "ds_fl"
+      lookupTable [
+        0 3992.8 0.03
+        0.01 3751.9 0.03
+        0.02 3173.8 0.03
+        0.03 2518.6 0.03
+        0.04 1945.3 0.03
+        0.06 1157.8 0.03
+        0.08 716.8 0.03
+        0.1 462.6 0.03
+        0.12 307.3 0.03
+        0.15 169.7 0.03
+        0.2 55.3 0.03
+        0.25 0 0.03
+      ]
+    }
+    DistanceSensor {
+      translation 0.0475 -0.03 -0.001
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 1 1 0
+          }
+          geometry Box {
+            size 0.005 0.005 0.005
+          }
+        }
+      ]
+      name "ds_fr"
+      lookupTable [
+        0 3992.8 0.03
+        0.01 3751.9 0.03
+        0.02 3173.8 0.03
+        0.03 2518.6 0.03
+        0.04 1945.3 0.03
+        0.06 1157.8 0.03
+        0.08 716.8 0.03
+        0.1 462.6 0.03
+        0.12 307.3 0.03
+        0.15 169.7 0.03
+        0.2 55.3 0.03
+        0.25 0 0.03
+      ]
+    }
+    DistanceSensor {
+      translation 0.0601 0.0095 -0.001
+      rotation 0 0 1 0.7854
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 1 1 0
+          }
+          geometry Box {
+            size 0.005 0.005 0.005
+          }
+        }
+      ]
+      name "ds_dl"
+      lookupTable [
+        0 3992.8 0.03
+        0.01 3751.9 0.03
+        0.02 3173.8 0.03
+        0.03 2518.6 0.03
+        0.04 1945.3 0.03
+        0.06 1157.8 0.03
+        0.08 716.8 0.03
+        0.1 462.6 0.03
+        0.12 307.3 0.03
+        0.15 169.7 0.03
+        0.2 55.3 0.03
+        0.25 0 0.03
+      ]
+    }
+    DistanceSensor {
+      translation 0.0601 -0.0095 -0.001
+      rotation 0 0 1 -0.7854
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 1 1 0
+          }
+          geometry Box {
+            size 0.005 0.005 0.005
+          }
+        }
+      ]
+      name "ds_dr"
+      lookupTable [
+        0 3992.8 0.03
+        0.01 3751.9 0.03
+        0.02 3173.8 0.03
+        0.03 2518.6 0.03
+        0.04 1945.3 0.03
+        0.06 1157.8 0.03
+        0.08 716.8 0.03
+        0.1 462.6 0.03
+        0.12 307.3 0.03
+        0.15 169.7 0.03
+        0.2 55.3 0.03
+        0.25 0 0.03
+      ]
+    }
+    Gyro {
+      translation 0.04175 0 0
+      lookupTable [
+        -8.727 -8.727 0.01
+        8.727 8.727 0.01
+      ]
+    }
+  ]
+  name "micromouse"
+  boundingObject Group {
+    children [
+      Pose {
+        translation -0.023 0 0
+        children [
+          Box {
+            size 0.012 0.08 0.016
+          }
+        ]
+      }
+      Pose {
+        children [
+          Box {
+            size 0.034 0.065 0.016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0239 0 0
+        children [
+          Box {
+            size 0.0139 0.08 0.016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0316 0 0
+        children [
+          Box {
+            size 0.0015 0.08 0.016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0331 0 0
+        children [
+          Box {
+            size 0.0015 0.0799 0.016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0345 0 0
+        children [
+          Box {
+            size 0.0015 0.0796 0.016
+          }
+        ]
+      }
+      Pose {
+        translation 0.036 0 0
+        children [
+          Box {
+            size 0.0015 0.0793 0.016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0375 0 0
+        children [
+          Box {
+            size 0.0015 0.0788 0.016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0389 0 0
+        children [
+          Box {
+            size 0.0015 0.0781 0.016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0404 0 0
+        children [
+          Box {
+            size 0.0015 0.0774 0.016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0418 0 -0.0072
+        children [
+          Box {
+            size 0.0015 0.0765 0.0016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0433 0 -0.0072
+        children [
+          Box {
+            size 0.0015 0.0755 0.0016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0448 0 -0.0072
+        children [
+          Box {
+            size 0.0015 0.0743 0.0016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0462 0 -0.0072
+        children [
+          Box {
+            size 0.0015 0.0729 0.0016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0477 0 -0.0072
+        children [
+          Box {
+            size 0.0015 0.0714 0.0016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0491 0 -0.0072
+        children [
+          Box {
+            size 0.0015 0.0698 0.0016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0506 0 -0.0072
+        children [
+          Box {
+            size 0.0015 0.0679 0.0016
+          }
+        ]
+      }
+      Pose {
+        translation 0.052 0 -0.0072
+        children [
+          Box {
+            size 0.0015 0.0658 0.0016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0535 0 -0.0072
+        children [
+          Box {
+            size 0.0015 0.0634 0.0016
+          }
+        ]
+      }
+      Pose {
+        translation 0.055 0 -0.0072
+        children [
+          Box {
+            size 0.0015 0.0608 0.0016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0564 0 -0.0072
+        children [
+          Box {
+            size 0.0015 0.0579 0.0016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0579 0 -0.0072
+        children [
+          Box {
+            size 0.0015 0.0546 0.0016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0593 0 -0.0072
+        children [
+          Box {
+            size 0.0015 0.0508 0.0016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0608 0 -0.0072
+        children [
+          Box {
+            size 0.0015 0.0464 0.0016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0623 0 -0.0072
+        children [
+          Box {
+            size 0.0015 0.0411 0.0016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0637 0 -0.0072
+        children [
+          Box {
+            size 0.0015 0.0344 0.0016
+          }
+        ]
+      }
+      Pose {
+        translation 0.0652 0 -0.0072
+        children [
+          Box {
+            size 0.0015 0.0242 0.0016
+          }
+        ]
+      }
+      Pose {
+        translation 0.03 0 -0.0115
+        children [
+          Sphere {
+            radius 0.003
+          }
+        ]
+      }
+    ]
+  }
+  physics Physics {
+    density -1
+    mass 0.08
+    centerOfMass [
+      0.008 0 0
+    ]
+  }
+  controller "continuous_dqn"
+  customData "{\"arena\": 2.4}"
+  supervisor TRUE
+  linearVelocity 3.009320485304377e-17 -9.756431815269614e-17 -2.2204460492503132e-17
+  angularVelocity -1.8506380257855347e-15 -6.7702588727073185e-15 7.494485653074908e-16
+}
