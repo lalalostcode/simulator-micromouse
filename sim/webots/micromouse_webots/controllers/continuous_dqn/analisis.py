@@ -13,12 +13,12 @@ Pakai (dari folder ini, di luar Webots):
     python analisis.py --outdir X       # folder keluaran lain
 
 Berkas yang dibuat:
-    01_reward                 05_langkah_area_bahaya      09_tabrakan_pinggir_tengah   13_porsi_aksi
+    01_reward                 05_langkah_area_bahaya      09_tabrakan_pinggir_tengah   12_porsi_aksi
     02_success_rate_epsilon   06_q_rata_rata              10_heatmap_tabrakan          ringkasan.txt
     03_langkah_episode_sukses 07_jalur_evaluasi           11_animasi_jalur_evaluasi.gif (--gif)
     04_komposisi_hasil        08_titik_akhir
 Hanya bila lapisan buatan aktif (log punya pengaman/pemecah/putaran > 0, mode PURE_DQN=False):
-    12_pengaman_pemecah, 14_porsi_greedy  (di mode murni dilewati: 12 selalu 0, 14 = 1 - epsilon).
+    13_pengaman_pemecah, 14_porsi_greedy  (di mode murni dilewati: 13 selalu 0, 14 = 1 - epsilon).
 Tiap nama berakhiran _best bila memakai --best.
 """
 import argparse
@@ -227,12 +227,12 @@ def main():
             ax.figure.colorbar(im, ax=ax, fraction=.046, pad=.02, label="tabrakan per kotak")
 
         save_one(outdir, "10_heatmap_tabrakan", sfx, square, draw_heat)
-    save_one(outdir, "13_porsi_aksi", sfx, (11, 5.5), lambda ax: panel_aksi(ax, d, W))
+    save_one(outdir, "12_porsi_aksi", sfx, (11, 5.5), lambda ax: panel_aksi(ax, d, W))
     if has_layers(d):
-        save_one(outdir, "12_pengaman_pemecah", sfx, wide, lambda ax: panel_intervensi(ax, d, W))
+        save_one(outdir, "13_pengaman_pemecah", sfx, wide, lambda ax: panel_intervensi(ax, d, W))
         save_one(outdir, "14_porsi_greedy", sfx, wide, lambda ax: panel_greedy(ax, d, W))
     else:
-        print("mode DQN murni: grafik 12 (pengaman/pemecah) dan 14 (porsi greedy) dilewati")
+        print("mode DQN murni: grafik 13 (pengaman/pemecah) dan 14 (porsi greedy) dilewati")
 
     txt = "\n".join(summary(d, lay, W, a.edge)) + "\n"
     (outdir / f"ringkasan{sfx}.txt").write_text(txt, encoding="utf-8")
