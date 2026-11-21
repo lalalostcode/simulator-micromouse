@@ -1,0 +1,7 @@
+algorithm,epsilon_mode,episodes,goals,first_goal,best_of_50,checkpoint_episode,greedy_goals_of_10,simulation_seconds,wall_seconds
+qlearning,decay,2500,908,536,48,2007,10,49534.2,2650
+qlearning,constant,2500,845,66,41,2374,5,52288.9,2773
+qlearning,route,2500,1589,75,50,1448,7,53619.0,2835
+dqn,decay,2500,704,1494,48,2242,9,105457.7,8803
+dqn,constant,2500,303,1872,47,2299,10,133240.8,10743
+dqn,route,2500,1461,853,50,1880,10,108269.2,8825

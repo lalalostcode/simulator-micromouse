@@ -1,7 +1,6 @@
 """Q-learning tabular murni: robot menemukan dan mencapai target di arena kontinu berisi rintangan.
 
-Tata letak arena TETAP (target dan 5 rintangan dipasang di world, lihat
-tools/make_continuous_world.py); robot selalu start dari pose yang sama.
+Arena dan posisi start dibaca dari world. Arah awal training dapat diacak.
 
 Dunia fisik kontinu (kecepatan roda riil, fisika Webots 16 ms), tetapi kunci
 Q-table adalah tuple bilangan bulat hasil bin dari sensor (lihat arena_env.py).
@@ -30,32 +29,32 @@ Variabel lingkungan (semua opsional):
   MM_START_HEADING  "a,b": arah awal robot ACAK per episode training, seragam di
                 antara a dan b derajat arah kompas (0 = utara, 90 = timur);
                 "world" = pakai arah robot di world. Bawaan: "0,90"
-                (START_HEADING_DEFAULT). Evaluasi akhir selalu memakai arah robot di world.
-  MM_EVAL_ONLY  1: tanpa training, muat qtable_state_best.pkl lalu evaluasi
+                (START_HEADING_DEFAULT). Evaluasi memakai lima arah tetap, dua ulangan per arah.
+  MM_EVAL_ONLY  1: muat checkpoint dan jalankan evaluasi greedy
+  MM_MODEL, MM_OUT: path checkpoint dan folder keluaran
+  MM_EPS_MODE, MM_EPSILON, MM_EARLY_STOP: jadwal eksplorasi dan anggaran training
   MICROMOUSE_QUIT 1: tutup Webots setelah selesai
 Keluaran di folder ini: episode_log.csv, qtable_state.pkl, eval_result.json (berisi juga peta untuk analisis.py).
 """
 import csv
-import json
 import math
 import os
 import pickle
 import random
+import time
 from collections import deque
 from pathlib import Path
 
 import numpy as np
 
-from arena_env import ACTIONS, ACTION_NAMES, TARGET_KNOWN, ArenaEnv, discretize
+from arena_env import ACTIONS, ACTION_NAMES, DECISION_STEPS, DT, SETTLE_STEPS, TARGET_KNOWN, TRACK, WHEEL_R, ArenaEnv, discretize
+from experiments import EpsilonSchedule, checkpoint_metadata, evaluate_policy, output_dir
 
 HERE = Path(__file__).resolve().parent
 ALPHA, GAMMA = 0.3, 0.95
 # Mode tidak tahu target butuh eksplorasi lebih lama (imbalan jarang): epsilon turun lebih pelan.
 EPS_START, EPS_DECAY, EPS_MIN = 1.0, (0.997 if TARGET_KNOWN else 0.9985), 0.05
 WINDOW, CONVERGED = 50, 0.95
-# Evaluasi akhir: arah awal (derajat kompas, 0 = utara, 90 = timur) dan ulangan per arah.
-EVAL_HEADINGS = (0.0, 22.5, 45.0, 67.5, 90.0)
-EVAL_REPEATS = 2
 
 EPISODES = int(os.environ.get("MM_EPISODES", "3000" if TARGET_KNOWN else "6000"))
 SEED = int(os.environ.get("MM_SEED", "7"))
@@ -85,10 +84,12 @@ class QAgent:
             self.q[s] = np.zeros(len(ACTIONS))
         return self.q[s]
 
-    def act(self, s, eps):
+    def act(self, s, eps, *, learn=True):
         if self.rng.random() < eps:
             return self.rng.randrange(len(ACTIONS))
-        r = self.row(s)
+        r = self.row(s) if learn else self.q.get(s)
+        if r is None:
+            return self.rng.randrange(len(ACTIONS))
         best = np.flatnonzero(r == r.max())          # seri: acak, bukan selalu indeks 0
         return int(self.rng.choice(list(best)))
 
@@ -98,10 +99,12 @@ class QAgent:
 
 
 def run_episode(env, agent, eps, learn, record_path=False, start_yaw=None):
+    env.record_stuck = learn
     s = discretize(env.reset(start_yaw))
-    total, path = 0.0, []
+    total = 0.0
+    path = [env.true_pose()[:2]] if record_path else []
     while True:
-        a = agent.act(s, eps)
+        a = agent.act(s, eps, learn=learn)
         raw2, r, outcome = env.step(a)
         s2 = discretize(raw2)
         if learn:
@@ -109,59 +112,50 @@ def run_episode(env, agent, eps, learn, record_path=False, start_yaw=None):
         total += r
         if record_path:
             x, y, _ = env.true_pose()
-            path.append((round(x, 4), round(y, 4)))
+            path.append((x, y))
         s = s2
         if outcome:
             return outcome, env.n_decisions, total, path
 
 
-def evaluate(env, agent):
-    """Evaluasi greedy (epsilon 0) dari beberapa arah awal, EVAL_REPEATS kali tiap arah."""
-    results = []
-    k = 0
-    n = len(EVAL_HEADINGS) * EVAL_REPEATS
-    for h in EVAL_HEADINGS:
-        for _ in range(EVAL_REPEATS):
-            k += 1
-            outcome, steps, total, path = run_episode(
-                env, agent, 0.0, False, True, start_yaw=math.radians(90.0 - h))
-            results.append({"heading": h, "outcome": outcome, "decisions": steps,
-                            "reward": round(total, 2), "sim_time": round(steps * 0.128, 1),
-                            "hazard_steps": env.hazard_steps, "path": path})
-            print(f"EVAL {k}/{n}: arah={h:5.1f} {outcome:9s} decisions={steps} R={total:.1f} "
-                  f"hazard_steps={env.hazard_steps}")
-    ok = sum(r["outcome"] == "goal" for r in results)
-    by_heading = {}
-    for r in results:
-        by_heading.setdefault(str(r["heading"]), []).append(r["outcome"])
-    print("EVAL ringkasan per arah awal (kompas, 0 = utara, 90 = timur):")
-    for h, outs in by_heading.items():
-        print(f"  {float(h):5.1f} deg: {sum(o == 'goal' for o in outs)}/{len(outs)} goal  {outs}")
-    print(f"EVAL success: {ok}/{n}")
-    lay = env.layout
-    (HERE / "eval_result.json").write_text(json.dumps({
-        "success": ok, "n": n, "arena": env.arena, "target": list(lay["target"]), "start": list(env.start),
-        "target_r": env.target_r, "obstacles": lay["obstacles"], "hazards": lay["hazards"],
-        "headings": list(EVAL_HEADINGS), "repeats": EVAL_REPEATS, "by_heading": by_heading,
-        "episodes": results}), encoding="utf-8")
+class QTableUnpickler(pickle.Unpickler):
+    """Checkpoint Q-table menyimpan tuple, daftar, dan angka."""
+    def find_class(self, module, name):
+        raise pickle.UnpicklingError(f"Tipe checkpoint tidak didukung: {module}.{name}")
+
+
+def evaluate(env, agent, dest, model, episode, train=None):
+    evaluate_policy(env, agent, run_episode, dest, seed=SEED,
+                    checkpoint=checkpoint_metadata(model, episode), settle_time=SETTLE_STEPS * DT,
+                    fields={"train": train})
 
 
 def main():
+    t_start = time.perf_counter()
     env = ArenaEnv()
+    out = output_dir(HERE)
     agent = QAgent(SEED)
     print(f"continuous_qlearning: seed={SEED} episodes<={EPISODES} layout=FIXED target_known={TARGET_KNOWN} start_heading={START_HEADING if START_HEADING else 'world'} "
           f"aksi={list(ACTION_NAMES)}")
 
     if EVAL_ONLY:
-        with open(HERE / "qtable_state_best.pkl", "rb") as f:
-            agent.q = {k: np.array(v) for k, v in pickle.load(f)["Q"].items()}
-        evaluate(env, agent)
+        model = Path(os.getenv("MM_MODEL") or HERE / "qtable_state_best.pkl")
+        with model.open("rb") as f:
+            checkpoint = QTableUnpickler(f).load()
+        agent.q = {key: np.asarray(values) for key, values in checkpoint["Q"].items()}
+        if any(len(row) != len(ACTIONS) for row in agent.q.values()):
+            raise ValueError("Jumlah aksi checkpoint Q-table berbeda dari controller.")
+        evaluate(env, agent, out / "eval_result.json", model, checkpoint.get("episode"))
         return env
 
-    log = open(HERE / "episode_log.csv", "w", newline="", encoding="utf-8")
+    if EPISODES < 1:
+        raise ValueError("MM_EPISODES harus positif.")
+    schedule = EpsilonSchedule(env, ACTIONS, WHEEL_R, TRACK, DECISION_STEPS * DT, (EPS_START, EPS_DECAY, EPS_MIN))
+    early_stop = os.getenv("MM_EARLY_STOP", "1") == "1"
+    model = out / "qtable_state.pkl"
+    log = (out / "episode_log.csv").open("w", newline="", encoding="utf-8")
     w = csv.writer(log)
-    w.writerow(["episode", "epsilon", "decisions", "reward", "outcome", "hazard_steps", "sim_time", "states", "start_heading", "end_x", "end_y"])
-    eps = EPS_START
+    w.writerow(["episode", "epsilon", "decisions", "reward", "outcome", "hazard_steps", "sim_time", "states", "start_heading", "end_x", "end_y", "route_seconds", "route_decisions"])
     heading_rng = random.Random(SEED + 1)     # terpisah dari rng agen
     window = deque(maxlen=WINDOW)
     best_rate, since_best, stop, rate = -1.0, 0, "max_episodes", 0.0
@@ -171,31 +165,31 @@ def main():
         if START_HEADING:
             heading = heading_rng.uniform(*START_HEADING)
             start_yaw = math.radians(90.0 - heading)
+        eps, route_time, route_steps = schedule.for_episode(ep, math.radians(90 - heading))
         outcome, steps, total, _ = run_episode(env, agent, eps, True, start_yaw=start_yaw)
         end_x, end_y, _ = env.true_pose()          # posisi robot saat episode berakhir
         window.append(outcome == "goal")
         rate = sum(window) / len(window)
-        w.writerow([ep, f"{eps:.4f}", steps, f"{total:.2f}", outcome, env.hazard_steps,
-                    f"{env.sim_time():.1f}", len(agent.q), f"{heading:.1f}", f"{end_x:.3f}", f"{end_y:.3f}"])
+        w.writerow([ep, f"{eps:.9f}", steps, f"{total:.2f}", outcome, env.hazard_steps,
+                    f"{env.sim_time():.1f}", len(agent.q), f"{heading:.1f}", f"{end_x:.3f}", f"{end_y:.3f}", route_time, route_steps])
         log.flush()
         print(f"EP {ep:4d} eps={eps:.2f} {outcome:9s} decisions={steps:3d} "
               f"R={total:7.1f} hazard={env.hazard_steps:3d} rate{len(window)}={rate:.2f} states={len(agent.q)}")
-        eps = max(EPS_MIN, eps * EPS_DECAY)
         if len(window) == WINDOW:
             if rate > best_rate:
                 best_rate, since_best = rate, 0
                 best_q, best_ep = {k: v.copy() for k, v in agent.q.items()}, ep
-                with open(HERE / "qtable_state.pkl", "wb") as f:
+                with model.open("wb") as f:
                     pickle.dump({"Q": {k: v.tolist() for k, v in best_q.items()},
                                  "rate": rate, "episode": ep}, f)
-            elif eps <= EPS_MIN + 1e-12:
+            elif schedule.mode != "decay" or max(EPS_MIN, eps * EPS_DECAY) <= EPS_MIN + 1e-12:
                 # Patience baru dihitung setelah epsilon mencapai minimum: selama masih
                 # eksplorasi, success rate yang belum naik belum berarti training macet.
                 since_best += 1
-            if rate >= CONVERGED:
+            if early_stop and rate >= CONVERGED:
                 stop = "converged"
                 break
-            if since_best >= PATIENCE:
+            if early_stop and since_best >= PATIENCE:
                 stop = "patience"
                 break
     log.close()
@@ -204,10 +198,13 @@ def main():
         agent.q = best_q
         print(f"Q-table terbaik: episode {best_ep}, success rate {best_rate:.2f} (disimpan di qtable_state.pkl)")
     else:      # belum pernah ada jendela penuh (training sangat singkat): simpan yang terakhir
-        with open(HERE / "qtable_state.pkl", "wb") as f:
+        best_ep = ep
+        with model.open("wb") as f:
             pickle.dump({"Q": {k: v.tolist() for k, v in agent.q.items()},
                          "rate": rate, "episode": ep}, f)
-    evaluate(env, agent)
+    evaluate(env, agent, out / "eval_result.json", model, best_ep,
+             {"stop": stop, "episodes": ep, "best_episode": best_ep, "epsilon": schedule.metadata(),
+              "wall_seconds": round(time.perf_counter() - t_start)})
     return env
 
 

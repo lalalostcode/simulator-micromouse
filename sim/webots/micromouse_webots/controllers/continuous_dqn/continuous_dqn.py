@@ -5,8 +5,8 @@ Beda dengan continuous_qlearning: state TIDAK di-bin. Jaringan menerima 13 angka
 terhadap keputusan sebelumnya) dan mengeluarkan satu nilai Q untuk tiap aksi diskret. Lingkungan, reward, deteksi macet/tabrakan, dan evaluasi sama dengan
 Q-learning (arena_env.py dipakai bersama dari folder continuous_qlearning).
 
-10 aksi (pasangan kecepatan roda, rad/s), lihat ACTIONS di bawah. Aksi 0-7 tanpa roda mundur dan dipilih
-DQN; aksi 8 dan 9 (putar di tempat, satu roda mundur) HANYA dijalankan lapisan pengaman untuk menghindar.
+Mode murni memilih dari 10 pasangan kecepatan roda. Pada mode berlapis,
+aksi putar di tempat hanya dipilih oleh lapisan pengaman atau manuver keluar.
 Robot tidak tahu letak target (arena_env.TARGET_KNOWN = False).
 Pose awal: posisi TETAP (0,18 ; 0,18) m; arah hadap ACAK seragam 0-90 derajat kompas tiap episode training
 (0 = utara, 90 = timur), sama dengan Q-learning. Evaluasi dari 5 arah: 0, 22,5, 45, 67,5, 90.
@@ -18,7 +18,9 @@ success rate tertinggi disimpan ke dqn_model.pt (pembanding); evaluasi greedy (e
 JARINGAN TERAKHIR (dqn_model_last.pt), bukan yang rate-nya tertinggi.
 
 Variabel lingkungan (opsional, hanya bila Webots dijalankan dari terminal):
-  MM_EPISODES, MM_SEED, MM_PATIENCE, MM_EVAL_ONLY=1 (muat dqn_model_best.pt), MICROMOUSE_QUIT=1
+  MM_EPISODES, MM_SEED, MM_PATIENCE, MM_EVAL_ONLY=1, MICROMOUSE_QUIT=1
+  MM_MODEL, MM_OUT: path checkpoint dan folder keluaran
+  MM_EPS_MODE, MM_EPSILON, MM_EARLY_STOP: jadwal eksplorasi dan anggaran training
 Keluaran di folder ini: episode_log.csv, dqn_model.pt, eval_result.json, stuck_hotspots.json (titik macet dan titik tabrakan beserta jumlahnya).
 Catatan: kolom "states" di episode_log.csv berisi jumlah transisi di replay buffer; "greedy" =
 jumlah keputusan greedy (bukan acak) yang tidak diganti pengaman; aksi_0..aksi_9 = berapa kali tiap
@@ -43,6 +45,7 @@ sys.path.insert(0, str(HERE.parent / "continuous_qlearning"))
 import arena_env                                  # noqa: E402
 from arena_env import ArenaEnv, TARGET_KNOWN      # noqa: E402
 from dqn_agent import DQNAgent                    # noqa: E402
+from experiments import EpsilonSchedule, checkpoint_metadata, evaluate_policy, output_dir  # noqa: E402
 
 # Daftar aksi DQN menimpa daftar 5 aksi milik Q-learning (arena_env membacanya saat step()).
 ACTIONS = (
@@ -95,10 +98,8 @@ N_STEP = int(os.environ.get("MM_NSTEP", "20"))             # target 20-langkah (
 GAMMA = float(os.environ.get("MM_GAMMA", "0.995"))          # horizon efektif ~200 keputusan (sebelumnya 0,99: ~100); bobot goal pada 220 keputusan 0,33 (sebelumnya 0,11)
 EPS_START, EPS_DECAY, EPS_MIN = 1.0, 0.9985, 0.05     # epsilon mencapai 0,05 sekitar episode 2.000 (sama dengan Q-learning)
 WINDOW, CONVERGED = 50, 0.95
-EARLY_STOP = True           # sama dengan Q-learning: berhenti bila rate >= CONVERGED, atau patience habis (dihitung setelah epsilon minimum)
+EARLY_STOP = os.getenv("MM_EARLY_STOP", "1") == "1"           # sama dengan Q-learning: berhenti bila rate >= CONVERGED, atau patience habis (dihitung setelah epsilon minimum)
 STOP_AT_EPS_MIN = False     # True = berhenti begitu epsilon mencapai EPS_MIN (tanpa menunggu konvergen)
-EVAL_HEADINGS = (0.0, 22.5, 45.0, 67.5, 90.0)   # arah awal evaluasi (kompas: 0 = utara, 90 = timur), sama dengan Q-learning
-EVAL_REPEATS = 2            # sama dengan Q-learning (greedy + fisika deterministik: ulangan umumnya identik)
 IR_SCALE = 1200.0       # input IR = sqrt(ADC / IR_SCALE), dipotong ke [0, 1] (ADC >= 1200 ~ < 50 mm = 1,0)
 IR_DELTA_GAIN = 3.0     # pengali selisih IR antar keputusan (skala sebanding dengan input lain)
 
@@ -146,7 +147,6 @@ EPISODES = int(os.environ.get("MM_EPISODES", "6000"))
 SEED = int(os.environ.get("MM_SEED", "7"))
 PATIENCE = int(os.environ.get("MM_PATIENCE", "800"))
 EVAL_ONLY = os.environ.get("MM_EVAL_ONLY") == "1"
-OUT_DIR = Path(os.environ.get("MM_OUT") or HERE)      # folder keluaran (log, model, eval); bawaan folder ini
 START_HEADING = (0.0, 90.0)       # arah awal training: acak seragam di antara dua sudut (derajat kompas); sama = tetap
 
 
@@ -232,11 +232,11 @@ def side_filter(a, raw, mem_l, mem_r):
     return 0
 
 
-def dump_hotspots(env):
+def dump_hotspots(env, out):
     def fmt(spots):
         return [{"x": round(h[0], 3), "y": round(h[1], 3), "n": h[2]}
                 for h in sorted(spots, key=lambda h: -h[2])]
-    (OUT_DIR / "stuck_hotspots.json").write_text(json.dumps(
+    (out / "stuck_hotspots.json").write_text(json.dumps(
         {"stuck": fmt(env.hotspots), "tabrakan": fmt(env.crash_spots)}), encoding="utf-8")
 
 
@@ -341,8 +341,9 @@ def run_episode(env, agent, eps, learn, record_path=False, start_yaw=None):
     env.record_stuck = learn            # evaluasi tidak menambah hitungan titik macet
     raw = env.reset(start_yaw)
     s, ir = features(raw, env.arena, 0)
-    display = env.robot.getDevice("state_hud")   # None kalau world belum punya Display ini
-    total, path = 0.0, []
+    display = env.robot.getDevice("state_hud") if os.getenv("MM_HUD", "1") == "1" else None
+    total = 0.0
+    path = [env.true_pose()[:2]] if record_path else []
     agent.ep_counts, agent.ep_greedy, agent.ep_shield = [0] * len(ACTIONS), 0, 0     # statistik episode ini
     agent.ep_escape = 0
     q_sum, q_n = 0.0, 0
@@ -435,7 +436,7 @@ def run_episode(env, agent, eps, learn, record_path=False, start_yaw=None):
         draw_state_hud(display, s2, ACTION_NAMES[a], env.n_decisions, eps, r, total)
         if record_path:
             x, y, _ = env.true_pose()
-            path.append((round(x, 4), round(y, 4)))
+            path.append((x, y))
         s, ir = s2, ir2
         if outcome:
             if learn:
@@ -444,40 +445,16 @@ def run_episode(env, agent, eps, learn, record_path=False, start_yaw=None):
             return outcome, env.n_decisions, total, path
 
 
-def evaluate(env, agent, fname="eval_result.json", meta=None):
-    """Evaluasi greedy (epsilon 0) dari beberapa arah awal; format sama dengan Q-learning."""
-    results, k = [], 0
-    n = len(EVAL_HEADINGS) * EVAL_REPEATS
-    for h in EVAL_HEADINGS:
-        for _ in range(EVAL_REPEATS):
-            k += 1
-            outcome, steps, total, path = run_episode(
-                env, agent, 0.0, False, True, start_yaw=math.radians(90.0 - h))
-            results.append({"heading": h, "outcome": outcome, "decisions": steps,
-                            "reward": round(total, 2), "sim_time": round(steps * 0.128, 1),
-                            "hazard_steps": env.hazard_steps, "path": path})
-            print(f"EVAL {k}/{n}: arah={h:5.1f} {outcome:9s} decisions={steps} R={total:.1f} "
-                  f"hazard_steps={env.hazard_steps}")
-    ok = sum(r["outcome"] == "goal" for r in results)
-    by_heading = {}
-    for r in results:
-        by_heading.setdefault(str(r["heading"]), []).append(r["outcome"])
-    print("EVAL ringkasan per arah awal (kompas, 0 = utara, 90 = timur):")
-    for h, outs in by_heading.items():
-        print(f"  {float(h):5.1f} deg: {sum(o == 'goal' for o in outs)}/{len(outs)} goal  {outs}")
-    print(f"EVAL success: {ok}/{n}")
-    lay = env.layout
-    (OUT_DIR / fname).write_text(json.dumps({
-        "success": ok, "n": n, "arena": env.arena, "target": list(lay["target"]), "start": list(env.start),
-        "target_r": env.target_r, "obstacles": lay["obstacles"], "hazards": lay["hazards"],
-        "headings": list(EVAL_HEADINGS), "repeats": EVAL_REPEATS, "by_heading": by_heading,
-        "pure_dqn": PURE_DQN, "gamma": GAMMA, "n_step": N_STEP, "seed": SEED, "train": meta or {},
-        "episodes": results}), encoding="utf-8")
+def evaluate(env, agent, out, model, episode, fname="eval_result.json", meta=None):
+    evaluate_policy(env, agent, run_episode, out / fname, seed=SEED,
+                    checkpoint=checkpoint_metadata(model, episode), settle_time=arena_env.SETTLE_STEPS * arena_env.DT,
+                    fields={"pure_dqn": PURE_DQN, "gamma": GAMMA, "n_step": N_STEP, "train": meta})
 
 
 def main():
     t_start = time.time()
     env = ArenaEnv()
+    out = output_dir(HERE)
     rng = random.Random(SEED)
     torch.manual_seed(SEED)
     agent = DQNAgent(N_FEATURES, len(ACTIONS), rng, gamma=GAMMA, n_policy=N_POLICY_ACTIONS, n_step=N_STEP)
@@ -490,44 +467,50 @@ def main():
     print(f"  start_heading={START_HEADING} aksi={list(ACTION_NAMES)}")
 
     if EVAL_ONLY:
-        agent.load_state_dict(torch.load(HERE / "dqn_model_best.pt")["state"])
-        evaluate(env, agent)
+        model = Path(os.getenv("MM_MODEL") or HERE / "dqn_model_best.pt")
+        checkpoint = torch.load(model, map_location="cpu", weights_only=True)
+        agent.load_state_dict(checkpoint["state"])
+        evaluate(env, agent, out, model, checkpoint.get("episode"))
         return env
 
-    log = open(OUT_DIR / "episode_log.csv", "w", newline="", encoding="utf-8")
+    if EPISODES < 1:
+        raise ValueError("MM_EPISODES harus positif.")
+    schedule = EpsilonSchedule(env, ACTIONS[:N_POLICY_ACTIONS], arena_env.WHEEL_R, arena_env.TRACK,
+                               arena_env.DECISION_STEPS * arena_env.DT, (EPS_START, EPS_DECAY, EPS_MIN))
+    best_model, last_model = out / "dqn_model.pt", out / "dqn_model_last.pt"
+    log = (out / "episode_log.csv").open("w", newline="", encoding="utf-8")
     w = csv.writer(log)
     w.writerow(["episode", "epsilon", "decisions", "reward", "outcome", "hazard_steps", "sim_time",
                 "states", "start_heading", "end_x", "end_y", "greedy"]
-               + [f"aksi_{i}" for i in range(len(ACTIONS))] + ["pengaman", "pemecah", "q_rata", "putaran"])
-    eps = EPS_START
+               + [f"aksi_{i}" for i in range(len(ACTIONS))] + ["pengaman", "pemecah", "q_rata", "putaran", "route_seconds", "route_decisions"])
     heading_rng = random.Random(SEED + 1)
     window = deque(maxlen=WINDOW)
     best_rate, since_best, stop, rate = -1.0, 0, "max_episodes", 0.0
     best_sd, best_ep = None, 0
     for ep in range(1, EPISODES + 1):
         heading = heading_rng.uniform(*START_HEADING)
-        outcome, steps, total, _ = run_episode(env, agent, eps, True,
-                                               start_yaw=math.radians(90.0 - heading))
+        yaw = math.radians(90.0 - heading)
+        eps, route_time, route_steps = schedule.for_episode(ep, yaw)
+        outcome, steps, total, _ = run_episode(env, agent, eps, True, start_yaw=yaw)
         end_x, end_y, _ = env.true_pose()
         window.append(outcome == "goal")
         rate = sum(window) / len(window)
-        w.writerow([ep, f"{eps:.4f}", steps, f"{total:.2f}", outcome, env.hazard_steps,
+        w.writerow([ep, f"{eps:.9f}", steps, f"{total:.2f}", outcome, env.hazard_steps,
                     f"{env.sim_time():.1f}", agent.size, f"{heading:.1f}", f"{end_x:.3f}", f"{end_y:.3f}",
-                    agent.ep_greedy] + agent.ep_counts + [agent.ep_shield, agent.ep_escape, f"{agent.ep_q:.3f}", agent.ep_loop])
+                    agent.ep_greedy] + agent.ep_counts + [agent.ep_shield, agent.ep_escape, f"{agent.ep_q:.3f}", agent.ep_loop, route_time, route_steps])
         log.flush()
         if ep % 50 == 0:
-            dump_hotspots(env)
-            torch.save({"state": agent.state_dict(), "rate": rate, "episode": ep}, OUT_DIR / "dqn_model_last.pt")
+            dump_hotspots(env, out)
+            torch.save({"state": agent.state_dict(), "rate": rate, "episode": ep}, last_model)
         print(f"EP {ep:4d} eps={eps:.2f} {outcome:9s} decisions={steps:3d} R={total:7.1f} "
               f"hazard={env.hazard_steps:3d} rate{len(window)}={rate:.2f} loss={agent.last_loss:.4f} "
               f"buffer={agent.size} sukses={agent.succ.size} pengaman={agent.ep_shield} pemecah={agent.ep_escape} putaran={agent.ep_loop} Q={agent.ep_q:.2f}")
-        eps = max(EPS_MIN, eps * EPS_DECAY)
         if len(window) == WINDOW:
             if rate > best_rate:
                 best_rate, since_best = rate, 0
                 best_sd, best_ep = agent.state_dict(), ep
-                torch.save({"state": best_sd, "rate": rate, "episode": ep}, OUT_DIR / "dqn_model.pt")
-            elif eps <= EPS_MIN + 1e-12:
+                torch.save({"state": best_sd, "rate": rate, "episode": ep}, best_model)
+            elif schedule.mode != "decay" or max(EPS_MIN, eps * EPS_DECAY) <= EPS_MIN + 1e-12:
                 since_best += 1
             if EARLY_STOP and rate >= CONVERGED:
                 stop = "converged"
@@ -535,28 +518,28 @@ def main():
             if EARLY_STOP and since_best >= PATIENCE:
                 stop = "patience"
                 break
-        if STOP_AT_EPS_MIN and eps <= EPS_MIN + 1e-12:
+        if STOP_AT_EPS_MIN and schedule.mode == "decay" and max(EPS_MIN, eps * EPS_DECAY) <= EPS_MIN + 1e-12:
             stop = "eps_min"
             break
     log.close()
-    dump_hotspots(env)
+    dump_hotspots(env, out)
     print(f"TRAINING selesai: {stop}, episode={ep}, rate_akhir={rate:.2f}, buffer={agent.size}")
-    torch.save({"state": agent.state_dict(), "rate": rate, "episode": ep}, OUT_DIR / "dqn_model_last.pt")
+    torch.save({"state": agent.state_dict(), "rate": rate, "episode": ep}, last_model)
     if best_sd is not None:
         print(f"Model rate tertinggi: episode {best_ep}, success rate {best_rate:.2f} (disimpan di dqn_model.pt, "
               f"hanya pembanding)")
     else:
-        torch.save({"state": agent.state_dict(), "rate": rate, "episode": ep}, OUT_DIR / "dqn_model.pt")
+        torch.save({"state": agent.state_dict(), "rate": rate, "episode": ep}, best_model)
     meta = {"stop": stop, "episodes": ep, "updates": agent.updates, "wall_seconds": round(time.time() - t_start),
-            "rate_akhir": round(rate, 3), "best_rate": round(best_rate, 3), "best_episode": best_ep}
+            "rate_akhir": round(rate, 3), "best_rate": round(best_rate, 3), "best_episode": best_ep or ep, "epsilon": schedule.metadata()}
     print(f"Evaluasi 1: JARINGAN TERAKHIR (episode {ep}) -> eval_result.json; updates={agent.updates} "
           f"waktu={meta['wall_seconds']} s")
-    evaluate(env, agent, "eval_result.json", meta)
+    evaluate(env, agent, out, last_model, ep, meta=meta)
     if best_sd is not None and best_ep != ep:
         agent.load_state_dict(best_sd)
         print(f"Evaluasi 2: MODEL RATE TERTINGGI (episode {best_ep}) -> eval_result_rate_tertinggi.json "
               f"(pembanding Q-learning yang memakai tabel rate tertinggi)")
-        evaluate(env, agent, "eval_result_rate_tertinggi.json", meta)
+        evaluate(env, agent, out, best_model, best_ep, "eval_result_rate_tertinggi.json", meta)
     return env
 
 

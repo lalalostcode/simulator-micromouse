@@ -14,6 +14,7 @@ Arena 2,4 x 2,4 m, tata letak TETAP (hardcode di OBSTACLES dan HAZARDS):
 
 Pakai:  python tools/make_continuous_world.py          # hanya bila world belum ada
         python tools/make_continuous_world.py --force  # timpa world yang ada
+        python tools/make_continuous_world.py --complex  # turunan Q-learning dan DQN
 Keluaran: micromouse_webots/worlds/micromouse_continuous.wbt
 
 PENTING: tata letak di sini hanya titik awal. Setelah world dibuat, atur posisi
@@ -51,6 +52,13 @@ def box(name, x, y, sx, sy, yaw=0.0):
 
 def tri(name, p0, p1, p2):
     return {"name": name, "shape": "tri", "pts": [list(p0), list(p1), list(p2)]}
+
+
+COMPLEX_ADDITIONS = (
+    box("rintangan_uji_timur", 2.21, 1.25, 0.38, 0.10),
+    box("rintangan_uji_barat", 0.67, 0.65, 0.14, 0.42),
+    box("rintangan_uji_utara", 1.73, 1.69, 0.32, 0.08),
+)
 
 
 OBSTACLES = [
@@ -114,11 +122,30 @@ def disc(name, x, y, r, rgb, z, transparency=0.0):
             f"      geometry Cylinder {{ height 0.001 radius {r} }}\n    }}\n  ]\n  name \"{name}\"\n}}\n")
 
 
+def make_complex_worlds(force):
+    originals = (OUT, WORLDS / "micromouse_continuous_dqn.wbt")
+    destinations = tuple(src.with_stem(f"{src.stem}_complex") for src in originals)
+    for path in destinations:
+        if path.exists() and not force:
+            raise SystemExit(f"{path.name} sudah ada. Gunakan --force untuk membuat ulang.")
+    additions = "".join(solid(obstacle, "0.33 0.33 0.36") for obstacle in COMPLEX_ADDITIONS)
+    for source, destination in zip(originals, destinations):
+        original = source.read_text(encoding="utf-8")
+        before, robot = original.split("\nRobot {", 1)
+        destination.write_text(f"{before}\n{additions}Robot {{{robot}", encoding="utf-8")
+        print("ditulis:", destination)
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("--force", action="store_true", help="timpa world yang sudah ada")
-    if OUT.exists() and not ap.parse_args().force:
+    ap.add_argument("--complex", action="store_true", help="buat turunan arena dengan tiga rintangan tambahan")
+    args = ap.parse_args()
+    if args.complex:
+        make_complex_worlds(args.force)
+        return
+    if OUT.exists() and not args.force:
         raise SystemExit(f"{OUT.name} sudah ada; atur tata letak di GUI Webots. "
                          "Pakai --force bila memang ingin membuat ulang dari konstanta.")
     src = SOURCE.read_text(encoding="utf-8")

@@ -218,15 +218,7 @@ def main():
     if d["x"] is not None:
         save_one(outdir, "08_titik_akhir", sfx, square, lambda ax: qa.panel_endpoints(ax, d, lay))
         save_one(outdir, "09_tabrakan_pinggir_tengah", sfx, wide, lambda ax: qa.panel_edge_bar(ax, d, lay, a.edge))
-        col = d["out"] == "collision"
-        h = qa.heat_hist(d, lay, a.bins, col)
-
-        def draw_heat(ax):
-            im = qa.panel_heat(ax, d, lay, h, max(1, h.max()), f"Heatmap tabrakan: {int(col.sum())} tabrakan",
-                               np.ones(len(d["ep"]), bool))
-            ax.figure.colorbar(im, ax=ax, fraction=.046, pad=.02, label="tabrakan per kotak")
-
-        save_one(outdir, "10_heatmap_tabrakan", sfx, square, draw_heat)
+        qa.save_collision_density(outdir, "10_heatmap_tabrakan", sfx, square, d, lay, a.bins)
     save_one(outdir, "12_porsi_aksi", sfx, (11, 5.5), lambda ax: panel_aksi(ax, d, W))
     if has_layers(d):
         save_one(outdir, "13_pengaman_pemecah", sfx, wide, lambda ax: panel_intervensi(ax, d, W))

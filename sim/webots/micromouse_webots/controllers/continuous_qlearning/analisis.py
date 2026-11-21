@@ -232,6 +232,51 @@ def panel_heat(ax, d, lay, h, vmax, title, part):
     return im
 
 
+def collision_density(d, lay, bins=24):
+    """Kepadatan Gaussian dari titik akhir robot di episode tabrakan."""
+    from experiments import obstacle_distance
+
+    arena, bandwidth = lay["arena"], 0.08
+    axis = np.linspace(0, arena, max(241, bins * 10 + 1))
+    x, y = d["x"], d["y"]
+    valid = (d["out"] == "collision") & np.isfinite(x) & np.isfinite(y)
+    kx = np.exp(-0.5 * ((axis[:, None] - x[valid]) / bandwidth) ** 2)
+    ky = np.exp(-0.5 * ((axis[:, None] - y[valid]) / bandwidth) ** 2)
+    density = (ky @ kx.T) / (2 * np.pi * bandwidth ** 2)
+    grid_x, grid_y = np.meshgrid(axis, axis)
+    solid = np.zeros(density.shape, dtype=bool)
+    for obstacle in lay["obstacles"]:
+        solid |= obstacle_distance(grid_x, grid_y, obstacle) <= 0
+    return np.ma.masked_array(density, mask=solid), int(valid.sum())
+
+
+def panel_collision_density(ax, lay, density, count, title, vmax):
+    draw_map(ax, lay)
+    ax.set_title(f"{title}\n{count:,} tabrakan".replace(",", "."))
+    ax.grid(False)
+    if not count:
+        ax.text(.5, .5, "Tidak ada tabrakan", transform=ax.transAxes, ha="center", va="center",
+                bbox={"facecolor": "white", "edgecolor": "none", "alpha": .92})
+        return None
+    arena = lay["arena"]
+    opacity = np.clip((density.filled(0) / vmax) ** 0.4, 0, .94)
+    image = ax.imshow(density, origin="lower", extent=(0, arena, 0, arena), cmap="inferno_r",
+                      vmin=0, vmax=vmax, alpha=opacity, interpolation="bilinear", zorder=2)
+    ax.add_patch(Rectangle((0, 0), arena, arena, fill=False, edgecolor="#a33", lw=1.6, zorder=3))
+    return image
+
+
+def save_collision_density(outdir, name, sfx, figsize, d, lay, bins):
+    density, count = collision_density(d, lay, bins)
+
+    def draw(ax):
+        image = panel_collision_density(ax, lay, density, count, "Kepadatan tabrakan", max(1.0, density.max()))
+        if image is not None:
+            ax.figure.colorbar(image, ax=ax, fraction=.046, pad=.02, label="tabrakan per m²")
+
+    save_one(outdir, name, sfx, figsize, draw)
+
+
 def summary_lines(d, lay, W, edge):
     """Ringkasan angka sebagai daftar baris teks."""
     n = len(d["ep"])
@@ -313,7 +358,7 @@ def main():
     ap.add_argument("--last", type=int, default=0, help="hanya N episode terakhir")
     ap.add_argument("--from", dest="start", type=int, default=0, help="mulai dari episode ini")
     ap.add_argument("--window", type=int, default=50, help="jendela rata-rata bergerak")
-    ap.add_argument("--bins", type=int, default=24, help="kehalusan heatmap (kotak per sumbu)")
+    ap.add_argument("--bins", type=int, default=24, help="pengatur resolusi render heatmap")
     ap.add_argument("--edge", type=float, default=0.40, help="lebar pita pinggir (m)")
     ap.add_argument("--csv", default=None)
     ap.add_argument("--eval", default=None, help="berkas eval_result*.json (sekaligus sumber peta)")
@@ -350,16 +395,7 @@ def main():
     save_one(outdir, "08_titik_akhir", sfx, square, lambda ax: panel_endpoints(ax, d, lay))
     save_one(outdir, "09_tabrakan_pinggir_tengah", sfx, wide, lambda ax: panel_edge_bar(ax, d, lay, a.edge))
     if d["x"] is not None:
-        col = d["out"] == "collision"
-        h = heat_hist(d, lay, a.bins, col)
-        vmax = max(1, h.max())
-
-        def draw_heat(ax):
-            im = panel_heat(ax, d, lay, h, vmax, f"Heatmap tabrakan: semua episode, {int(col.sum())} tabrakan",
-                            np.ones(len(d["ep"]), bool))
-            ax.figure.colorbar(im, ax=ax, fraction=.046, pad=.02, label="tabrakan per kotak")
-
-        save_one(outdir, "10_heatmap_tabrakan", sfx, square, draw_heat)
+        save_collision_density(outdir, "10_heatmap_tabrakan", sfx, square, d, lay, a.bins)
     else:
         print("log tanpa kolom end_x/end_y: grafik 08-10 dilewati/tidak lengkap")
 
